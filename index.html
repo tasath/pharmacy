@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Συνταγές">
+<title>Συνταγές ΙΔΙΚΑ</title>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@500&display=swap');
+
+:root {
+  --green: #1a5f3f;
+  --green2: #2d8a5e;
+  --green-light: #e8f5ee;
+  --bg: #f2f2f7;
+  --surface: #ffffff;
+  --border: #e0e0e5;
+  --text: #1a1a2e;
+  --text2: #6b6b80;
+  --text3: #ababbb;
+  --danger: #d0021b;
+  --radius: 14px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.app-header {
+  background: var(--green);
+  padding: 52px 20px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.app-header .icon {
+  width: 40px; height: 40px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+}
+.app-header h1 { font-size: 20px; font-weight: 600; color: white; }
+.app-header p  { font-size: 12px; color: rgba(255,255,255,0.7); margin-top: 1px; }
+
+.screen { display: none; padding: 20px; padding-bottom: 90px; }
+.screen.active { display: block; }
+
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.card-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px; font-weight: 600;
+  color: var(--text2);
+  text-transform: uppercase; letter-spacing: 0.5px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.card-body { padding: 18px; }
+
+/* Camera */
+.camera-area {
+  width: 100%; aspect-ratio: 4/3;
+  background: #111;
+  border-radius: 12px; overflow: hidden;
+  position: relative; margin-bottom: 14px;
+}
+#video-el {
+  width: 100%; height: 100%;
+  object-fit: cover; display: block;
+}
+.cam-overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.scan-guide {
+  width: 82%; height: 58%;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-radius: 10px; position: relative;
+}
+.scan-guide::before, .scan-guide::after,
+.scan-guide .c3, .scan-guide .c4 {
+  content: ''; position: absolute;
+  width: 24px; height: 24px;
+  border-color: #4ade80; border-style: solid;
+}
+.scan-guide::before { top:-2px; left:-2px; border-width:3px 0 0 3px; border-radius:5px 0 0 0; }
+.scan-guide::after  { top:-2px; right:-2px; border-width:3px 3px 0 0; border-radius:0 5px 0 0; }
+.scan-guide .c3 { bottom:-2px; left:-2px; border-width:0 0 3px 3px; border-radius:0 0 0 5px; }
+.scan-guide .c4 { bottom:-2px; right:-2px; border-width:0 3px 3px 0; border-radius:0 0 5px 0; }
+.scan-line {
+  position: absolute; width: 100%; height: 2px;
+  background: linear-gradient(90deg, transparent, #4ade80, transparent);
+  animation: scanMove 2s linear infinite;
+}
+@keyframes scanMove { 0%{top:0;opacity:1} 95%{opacity:1} 100%{top:100%;opacity:0} }
+.cam-hint {
+  position: absolute; bottom: 12px;
+  left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.65); color: white;
+  font-size: 12px; padding: 5px 14px;
+  border-radius: 20px; white-space: nowrap;
+}
+
+/* Buttons */
+.btn-capture {
+  width: 100%; padding: 18px;
+  background: var(--green); color: white;
+  border: none; border-radius: 14px;
+  font-family: inherit; font-size: 18px; font-weight: 600;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  transition: background 0.2s, transform 0.1s;
+  -webkit-appearance: none;
+}
+.btn-capture:active { background: var(--green2); transform: scale(0.98); }
+.btn-capture:disabled { opacity: 0.4; }
+
+.btn {
+  padding: 12px 20px; border-radius: 10px; border: none;
+  font-family: inherit; font-size: 15px; font-weight: 500;
+  cursor: pointer; transition: all 0.15s;
+  display: inline-flex; align-items: center; gap: 7px;
+  -webkit-appearance: none;
+}
+.btn-primary { background: var(--green); color: white; width: 100%; justify-content: center; padding: 15px; }
+.btn-primary:active { background: var(--green2); }
+.btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+.btn-secondary:active { background: var(--bg); }
+.btn:disabled { opacity: 0.4; }
+.btn-row { display: flex; gap: 10px; margin-top: 12px; }
+.btn-row .btn { flex: 1; justify-content: center; }
+
+/* Status */
+.status-bar {
+  padding: 11px 16px; font-size: 13px;
+  border-radius: 10px; margin-bottom: 14px;
+  display: none; align-items: center; gap: 8px;
+}
+.status-bar.info    { background: #e8f0fe; color: #1a56c4; display: flex; }
+.status-bar.success { background: var(--green-light); color: var(--green); display: flex; }
+.status-bar.error   { background: #fff0f0; color: var(--danger); display: flex; }
+
+/* Patient fields */
+.patient-fields {
+  background: var(--green-light); border-radius: 12px;
+  padding: 16px; margin-bottom: 16px;
+  border: 1px solid #c5e0d0;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.field-label { font-size: 12px; font-weight: 600; color: var(--green); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.opt { font-size: 10px; color: var(--text3); font-weight: 400; text-transform: none; letter-spacing: 0; margin-left: 4px; }
+.field-input {
+  font-family: inherit; font-size: 15px;
+  padding: 11px 13px; border: 1px solid #c5e0d0;
+  border-radius: 9px; background: white; color: var(--text);
+  width: 100%; -webkit-appearance: none;
+}
+.field-input:focus { outline: none; border-color: var(--green2); }
+
+/* Rx rows */
+.rx-list { display: flex; flex-direction: column; gap: 10px; }
+.rx-row {
+  background: var(--bg); border-radius: 10px;
+  padding: 12px 14px; border: 1px solid var(--border);
+}
+.rx-code { font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 500; color: var(--green); margin-bottom: 4px; }
+.rx-input {
+  font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+  padding: 7px 10px; border: 1px solid var(--border);
+  border-radius: 7px; background: white; width: 100%;
+  color: var(--text); -webkit-appearance: none;
+}
+.rx-label { font-size: 11px; color: var(--text3); font-weight: 500; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.4px; }
+.rx-field { display: flex; flex-direction: column; }
+.remove-btn {
+  background: none; border: none; color: var(--text3);
+  font-size: 20px; line-height: 1; cursor: pointer; padding: 2px 6px; border-radius: 6px;
+}
+.remove-btn:active { color: var(--danger); background: #fff0f0; }
+
+/* Barcode preview grid */
+.bc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.bc-card {
+  background: white; border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px; text-align: center;
+}
+.bc-card canvas { max-width: 100%; height: auto !important; }
+.bc-num { font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 500; margin-top: 4px; }
+.bc-dates { font-size: 10px; color: var(--text2); margin-top: 2px; line-height: 1.5; }
+.bc-idx { font-size: 9px; color: var(--text3); margin-bottom: 4px; }
+
+/* History */
+.history-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 13px 18px; border-bottom: 1px solid var(--border); font-size: 14px;
+}
+.history-row:last-child { border-bottom: none; }
+.history-ts { font-size: 12px; color: var(--text3); }
+.history-badge { background: var(--green-light); color: var(--green); border-radius: 20px; padding: 2px 10px; font-size: 12px; font-weight: 600; }
+
+/* Bottom nav */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border-top: 1px solid var(--border);
+  display: flex; padding-bottom: env(safe-area-inset-bottom);
+}
+.nav-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  padding: 10px 0 6px; cursor: pointer;
+  font-size: 10px; color: var(--text3); font-weight: 500;
+  border: none; background: none; font-family: inherit; transition: color 0.2s;
+}
+.nav-item.active { color: var(--green); }
+.nav-icon { font-size: 22px; margin-bottom: 2px; }
+
+/* Manual add */
+.manual-row { display: flex; gap: 8px; margin-top: 12px; padding-top: 14px; border-top: 1px solid var(--border); }
+.manual-row input {
+  flex: 1; font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+  padding: 10px 12px; border: 1px solid var(--border);
+  border-radius: 9px; -webkit-appearance: none; color: var(--text);
+}
+
+/* Spinner */
+.spinner {
+  width: 18px; height: 18px; flex-shrink: 0;
+  border: 2px solid rgba(26,95,63,0.2);
+  border-top-color: var(--green);
+  border-radius: 50%; animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* OCR progress */
+.ocr-progress {
+  background: var(--green-light); border-radius: 10px;
+  padding: 14px 16px; margin-bottom: 14px;
+  display: none; flex-direction: column; gap: 8px;
+}
+.ocr-progress.active { display: flex; }
+.progress-bar-wrap { background: #c5e0d0; border-radius: 20px; height: 6px; overflow: hidden; }
+.progress-bar { height: 100%; background: var(--green); border-radius: 20px; transition: width 0.3s; width: 0%; }
+.ocr-label { font-size: 13px; color: var(--green); font-weight: 500; }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 90px; left: 20px; right: 20px;
+  background: #1a1a2e; color: white;
+  padding: 13px 18px; border-radius: 12px;
+  font-size: 14px; text-align: center;
+  transform: translateY(20px); opacity: 0;
+  transition: all 0.3s; z-index: 999;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.ok  { background: var(--green); }
+.toast.err { background: var(--danger); }
+
+/* Empty */
+.empty { text-align: center; padding: 36px 20px; color: var(--text3); }
+.empty .ei { font-size: 40px; margin-bottom: 10px; }
+.empty p { font-size: 14px; }
+
+/* Print page */
+#print-page { display: none; }
+@media print {
+  body > *:not(#print-page) { display: none !important; }
+  #print-page {
+    display: block !important;
+    font-family: Arial, sans-serif;
+    padding: 16px;
+  }
+  .print-header {
+    display: flex; justify-content: space-between;
+    border-bottom: 2px solid #1a5f3f;
+    padding-bottom: 10px; margin-bottom: 14px;
+  }
+  .print-title { font-size: 17px; font-weight: 700; color: #1a5f3f; }
+  .print-meta  { font-size: 11px; color: #444; text-align: right; line-height: 1.7; }
+  .print-patient { background: #f0f7f3; padding: 8px 12px; border-radius: 5px; font-size: 12px; margin-bottom: 14px; }
+  .print-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .print-card { border: 1px solid #ccc; border-radius: 6px; padding: 12px; text-align: center; page-break-inside: avoid; }
+  .print-idx  { font-size: 10px; color: #888; margin-bottom: 4px; }
+  .print-code { font-family: 'Courier New', monospace; font-size: 11px; font-weight: 700; margin-top: 5px; letter-spacing: 1px; }
+  .print-dates { font-size: 11px; color: #444; margin-top: 3px; line-height: 1.6; }
+}
+
+#file-input { display: none; }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div class="icon">💊</div>
+  <div>
+    <h1>Συνταγές ΙΔΙΚΑ</h1>
+    <p>Σάρωση · Barcodes · Εκτύπωση</p>
+  </div>
+</div>
+
+<!-- ══ SCREEN 1: SCAN ══ -->
+<div class="screen active" id="screen-scan">
+  <div style="height:14px"></div>
+  <div id="status-scan" class="status-bar"></div>
+
+  <div class="ocr-progress" id="ocr-prog">
+    <div class="ocr-label" id="ocr-label">Ανάλυση εικόνας...</div>
+    <div class="progress-bar-wrap"><div class="progress-bar" id="ocr-bar"></div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">📷 Φωτογράφιση SMS</div>
+    <div class="card-body">
+      <div class="camera-area">
+        <video id="video-el" autoplay playsinline muted></video>
+        <div class="cam-overlay">
+          <div class="scan-guide">
+            <div class="scan-line"></div>
+            <div class="c3"></div><div class="c4"></div>
+          </div>
+        </div>
+        <div class="cam-hint" id="cam-hint">Πατήστε "Κάμερα" για έναρξη</div>
+      </div>
+
+      <button class="btn-capture" id="btn-capture" disabled>
+        📸 Λήψη Φωτογραφίας
+      </button>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="btn-cam">▶ Κάμερα</button>
+        <button class="btn btn-secondary" id="btn-upload">🖼 Φόρτωση</button>
+      </div>
+
+      <div class="manual-row">
+        <input type="number" id="manual-code" placeholder="Χειρ. εισαγωγή (16 ψηφία)" maxlength="16">
+        <button class="btn btn-secondary" id="btn-manual">+</button>
+      </div>
+    </div>
+  </div>
+  <input type="file" id="file-input" accept="image/*">
+</div>
+
+<!-- ══ SCREEN 2: REVIEW ══ -->
+<div class="screen" id="screen-review">
+  <div style="height:14px"></div>
+
+  <div class="patient-fields">
+    <div>
+      <div class="field-label">Ασθενής <span class="opt">(προαιρετικό)</span></div>
+      <input type="text" class="field-input" id="patient-name" placeholder="Ονοματεπώνυμο">
+    </div>
+    <div>
+      <div class="field-label">ΑΜΚΑ <span class="opt">(προαιρετικό)</span></div>
+      <input type="text" class="field-input" id="patient-amka" placeholder="ΑΜΚΑ" maxlength="11">
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span>Συνταγές</span>
+      <span id="rx-badge" style="background:var(--green);color:white;border-radius:12px;padding:2px 10px;font-size:12px;font-weight:600;">0</span>
+    </div>
+    <div class="card-body">
+      <div class="rx-list" id="rx-list">
+        <div class="empty"><div class="ei">📋</div><p>Καμία συνταγή ακόμα</p></div>
+      </div>
+      <div class="manual-row">
+        <input type="number" id="manual-code2" placeholder="Προσθήκη αριθμού" maxlength="16">
+        <button class="btn btn-secondary" id="btn-manual2">+</button>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" id="btn-to-print" disabled>
+    Προεπισκόπηση & Εκτύπωση →
+  </button>
+  <div class="btn-row">
+    <button class="btn btn-secondary" id="btn-back-scan">← Νέα Σάρωση</button>
+  </div>
+</div>
+
+<!-- ══ SCREEN 3: PRINT ══ -->
+<div class="screen" id="screen-print">
+  <div style="height:14px"></div>
+  <div id="status-print" class="status-bar"></div>
+
+  <div class="card">
+    <div class="card-header">Προεπισκόπηση Barcodes</div>
+    <div class="card-body">
+      <div class="bc-grid" id="bc-grid">
+        <div class="empty"><div class="ei">🔄</div><p>Φόρτωση...</p></div>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" id="btn-print">
+    🖨 Εκτύπωση (AirPrint)
+  </button>
+  <div class="btn-row">
+    <button class="btn btn-secondary" id="btn-back-review">← Πίσω</button>
+    <button class="btn btn-secondary" id="btn-new">🔄 Νέα Συνταγή</button>
+  </div>
+</div>
+
+<!-- ══ SCREEN 4: HISTORY ══ -->
+<div class="screen" id="screen-history">
+  <div style="height:14px"></div>
+  <div class="card">
+    <div class="card-header">
+      <span>Ιστορικό Εκτυπώσεων</span>
+      <button class="btn btn-secondary" id="btn-clear-history" style="padding:4px 10px;font-size:12px;">Καθαρισμός</button>
+    </div>
+    <div id="history-list">
+      <div class="empty"><div class="ei">📜</div><p>Δεν υπάρχουν εκτυπώσεις ακόμα</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom Nav -->
+<div class="bottom-nav">
+  <button class="nav-item active" data-screen="scan">
+    <div class="nav-icon">📷</div>Σάρωση
+  </button>
+  <button class="nav-item" data-screen="review">
+    <div class="nav-icon">✅</div>Έλεγχος
+  </button>
+  <button class="nav-item" data-screen="print">
+    <div class="nav-icon">🖨</div>Εκτύπωση
+  </button>
+  <button class="nav-item" data-screen="history">
+    <div class="nav-icon">📜</div>Ιστορικό
+  </button>
+</div>
+
+<!-- Hidden print page - rendered here, printed via AirPrint -->
+<div id="print-page"></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────
+let prescriptions = [];
+let videoStream = null;
+let history = JSON.parse(localStorage.getItem('rx_history') || '[]');
+
+// ── Navigation ────────────────────────────────────────────────────
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  document.querySelector(`[data-screen="${name}"]`).classList.add('active');
+  if (name === 'history') renderHistory();
+  if (name === 'print')   buildPreview();
+}
+
+document.querySelectorAll('.nav-item').forEach(b => b.addEventListener('click', () => showScreen(b.dataset.screen)));
+document.getElementById('btn-back-scan').addEventListener('click',   () => showScreen('scan'));
+document.getElementById('btn-back-review').addEventListener('click', () => showScreen('review'));
+document.getElementById('btn-to-print').addEventListener('click',    () => showScreen('print'));
+document.getElementById('btn-new').addEventListener('click', () => {
+  prescriptions = [];
+  document.getElementById('patient-name').value = '';
+  document.getElementById('patient-amka').value = '';
+  renderRxList();
+  showScreen('scan');
+});
+
+// ── Toast ─────────────────────────────────────────────────────────
+function toast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+function setStatus(id, msg, type) {
+  const el = document.getElementById(id);
+  el.className = 'status-bar ' + type;
+  if (type === 'info') el.innerHTML = `<div class="spinner"></div>${msg}`;
+  else el.textContent = msg;
+}
+function clearStatus(id) { document.getElementById(id).className = 'status-bar'; }
+
+// ── Camera ────────────────────────────────────────────────────────
+const btnCam = document.getElementById('btn-cam');
+btnCam.addEventListener('click', () => {
+  if (videoStream) stopCamera(); else startCamera();
+});
+
+async function startCamera() {
+  try {
+    videoStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: {ideal:1920}, height: {ideal:1080} }
+    });
+    document.getElementById('video-el').srcObject = videoStream;
+    document.getElementById('btn-capture').disabled = false;
+    document.getElementById('cam-hint').textContent = 'Στρέψτε στο SMS — πατήστε 📸';
+    btnCam.textContent = '⏹ Σταμάτημα';
+  } catch(e) {
+    toast('Δεν επιτράπηκε η πρόσβαση στην κάμερα', 'err');
+  }
+}
+
+function stopCamera() {
+  if (videoStream) { videoStream.getTracks().forEach(t => t.stop()); videoStream = null; }
+  document.getElementById('video-el').srcObject = null;
+  document.getElementById('btn-capture').disabled = true;
+  document.getElementById('cam-hint').textContent = 'Πατήστε "Κάμερα" για έναρξη';
+  btnCam.textContent = '▶ Κάμερα';
+}
+
+document.getElementById('btn-capture').addEventListener('click', () => {
+  const video = document.getElementById('video-el');
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  runOCR(canvas.toDataURL('image/jpeg', 0.95));
+});
+
+// ── File upload ───────────────────────────────────────────────────
+document.getElementById('btn-upload').addEventListener('click', () => {
+  document.getElementById('file-input').click();
+});
+document.getElementById('file-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => runOCR(ev.target.result);
+  reader.readAsDataURL(file);
+  e.target.value = '';
+});
+
+// ── OCR (runs in browser via Tesseract.js) ────────────────────────
+async function runOCR(dataUrl) {
+  const prog = document.getElementById('ocr-prog');
+  const label = document.getElementById('ocr-label');
+  const bar = document.getElementById('ocr-bar');
+  prog.classList.add('active');
+  document.getElementById('btn-capture').disabled = true;
+  clearStatus('status-scan');
+
+  try {
+    const result = await Tesseract.recognize(dataUrl, 'ell+eng', {
+      logger: m => {
+        if (m.status === 'recognizing text') {
+          const pct = Math.round(m.progress * 100);
+          bar.style.width = pct + '%';
+          label.textContent = `Ανάλυση κειμένου... ${pct}%`;
+        } else if (m.status === 'loading tesseract core') {
+          label.textContent = 'Φόρτωση OCR...';
+          bar.style.width = '10%';
+        } else if (m.status === 'initializing tesseract') {
+          label.textContent = 'Αρχικοποίηση...';
+          bar.style.width = '20%';
+        } else if (m.status === 'loading language traineddata') {
+          label.textContent = 'Φόρτωση γλώσσας...';
+          bar.style.width = '35%';
+        }
+      }
+    });
+
+    prog.classList.remove('active');
+    bar.style.width = '0%';
+
+    const found = extractPrescriptions(result.data.text);
+
+    if (found.length > 0) {
+      found.forEach(p => {
+        if (!prescriptions.find(x => x.code === p.code)) prescriptions.push(p);
+      });
+      sortPrescriptions();
+      renderRxList();
+      toast(`✅ Βρέθηκαν ${found.length} συνταγές`, 'ok');
+      showScreen('review');
+    } else {
+      setStatus('status-scan', '⚠️ Δεν βρέθηκαν αριθμοί συνταγών. Δοκιμάστε με καλύτερο φωτισμό ή πλησιέστερα.', 'error');
+    }
+  } catch(e) {
+    prog.classList.remove('active');
+    setStatus('status-scan', '❌ Σφάλμα OCR: ' + e.message, 'error');
+  }
+
+  document.getElementById('btn-capture').disabled = !videoStream;
+}
+
+// ── Extract prescriptions from OCR text ──────────────────────────
+function extractPrescriptions(text) {
+  console.log('OCR raw:', text);
+  const found = [];
+
+  // Find all codes
+  const codeRx = /#\s*(\d{10,16})/g;
+  const bareRx  = /(?<![#\d])(\d{16})(?!\d)/g;
+  const dateRx  = /(\d{2}\/\d{2}\/\d{4})/g;
+
+  let m;
+  const codes = [];
+  while ((m = codeRx.exec(text)) !== null)  codes.push({ code: m[1], pos: m.index });
+  while ((m = bareRx.exec(text))  !== null) {
+    if (!codes.find(c => c.code === m[1])) codes.push({ code: m[1], pos: m.index });
+  }
+  codes.sort((a,b) => a.pos - b.pos);
+
+  const dates = [];
+  while ((m = dateRx.exec(text)) !== null) dates.push({ date: m[1], pos: m.index });
+
+  codes.forEach(c => {
+    const next = dates.filter(d => d.pos > c.pos).slice(0, 2);
+    found.push({ code: c.code, ekdosi: next[0]?.date || '', lixis: next[1]?.date || '' });
+  });
+
+  return found;
+}
+
+// ── Rx list ───────────────────────────────────────────────────────
+function parseDate(s) {
+  if (!s) return null;
+  const p = s.split('/');
+  return p.length === 3 ? new Date(p[2], p[1]-1, p[0]) : null;
+}
+
+function sortPrescriptions() {
+  prescriptions.sort((a,b) => {
+    const da = parseDate(a.ekdosi), db = parseDate(b.ekdosi);
+    if (!da && !db) return 0; if (!da) return 1; if (!db) return -1;
+    return da - db;
+  });
+}
+
+function renderRxList() {
+  const list = document.getElementById('rx-list');
+  document.getElementById('rx-badge').textContent = prescriptions.length;
+  document.getElementById('btn-to-print').disabled = prescriptions.length === 0;
+
+  if (!prescriptions.length) {
+    list.innerHTML = '<div class="empty"><div class="ei">📋</div><p>Καμία συνταγή ακόμα</p></div>';
+    return;
+  }
+
+  list.innerHTML = prescriptions.map((p,i) => `
+    <div class="rx-row">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="rx-code">#${p.code}</div>
+        <button class="remove-btn" onclick="removeRx(${i})">✕</button>
+      </div>
+      <div class="rx-field" style="margin-top:6px;">
+        <div class="rx-label">Αριθμός</div>
+        <input class="rx-input" value="${p.code}" onchange="prescriptions[${i}].code=this.value" maxlength="16">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+        <div class="rx-field">
+          <div class="rx-label">Έκδοση</div>
+          <input class="rx-input" value="${p.ekdosi}" placeholder="ΗΗ/ΜΜ/ΕΕΕΕ" onchange="prescriptions[${i}].ekdosi=this.value;sortPrescriptions();renderRxList()">
+        </div>
+        <div class="rx-field">
+          <div class="rx-label">Λήξη</div>
+          <input class="rx-input" value="${p.lixis}" placeholder="ΗΗ/ΜΜ/ΕΕΕΕ" onchange="prescriptions[${i}].lixis=this.value">
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function removeRx(i) { prescriptions.splice(i,1); renderRxList(); }
+
+function addManual(inputId) {
+  const input = document.getElementById(inputId);
+  const val = input.value.trim();
+  if (!/^\d{10,16}$/.test(val)) { toast('Εισάγετε 10-16 ψηφία', 'err'); return; }
+  if (prescriptions.find(p => p.code === val)) { toast('Υπάρχει ήδη', 'err'); return; }
+  prescriptions.push({ code: val, ekdosi: '', lixis: '' });
+  renderRxList(); input.value = '';
+  toast('Προστέθηκε!', 'ok');
+  showScreen('review');
+}
+
+document.getElementById('btn-manual').addEventListener('click',  () => addManual('manual-code'));
+document.getElementById('btn-manual2').addEventListener('click', () => addManual('manual-code2'));
+
+// ── Preview barcodes ──────────────────────────────────────────────
+function buildPreview() {
+  const grid = document.getElementById('bc-grid');
+  if (!prescriptions.length) {
+    grid.innerHTML = '<div class="empty"><p>Δεν υπάρχουν συνταγές</p></div>';
+    return;
+  }
+  grid.innerHTML = prescriptions.map((p,i) => `
+    <div class="bc-card">
+      <div class="bc-idx">Συνταγή ${i+1}/${prescriptions.length}</div>
+      <canvas id="bc-prev-${i}"></canvas>
+      <div class="bc-num">${p.code}</div>
+      <div class="bc-dates">
+        ${p.ekdosi ? 'Έκδοση: '+p.ekdosi : ''}
+        ${p.ekdosi && p.lixis ? '<br>' : ''}
+        ${p.lixis ? 'Λήξη: '+p.lixis : ''}
+      </div>
+    </div>
+  `).join('');
+
+  setTimeout(() => {
+    prescriptions.forEach((p,i) => {
+      try {
+        JsBarcode(`#bc-prev-${i}`, p.code, {
+          format: 'CODE128', lineColor: '#000',
+          width: 1.5, height: 55, displayValue: false,
+          background: '#fff', margin: 4
+        });
+      } catch(e) { console.error(e); }
+    });
+    buildPrintPage();
+  }, 100);
+}
+
+// ── Build hidden print page ───────────────────────────────────────
+function buildPrintPage() {
+  const name = document.getElementById('patient-name').value.trim();
+  const amka = document.getElementById('patient-amka').value.trim();
+  const now  = new Date().toLocaleDateString('el-GR') + ' ' + new Date().toLocaleTimeString('el-GR', {hour:'2-digit',minute:'2-digit'});
+
+  let cards = '';
+  prescriptions.forEach((p,i) => {
+    cards += `
+      <div class="print-card">
+        <div class="print-idx">Συνταγή ${i+1} από ${prescriptions.length}</div>
+        <canvas id="bc-print-${i}"></canvas>
+        <div class="print-code">${p.code}</div>
+        <div class="print-dates">
+          ${p.ekdosi ? 'Έκδοση: '+p.ekdosi : ''}
+          ${p.ekdosi && p.lixis ? '<br>' : ''}
+          ${p.lixis ? 'Λήξη: '+p.lixis : ''}
+        </div>
+      </div>`;
+  });
+
+  const patientBlock = (name || amka) ? `
+    <div class="print-patient">
+      ${name ? `<span><strong>Ασθενής:</strong> ${name}</span>` : ''}
+      ${amka ? `<span><strong>ΑΜΚΑ:</strong> ${amka}</span>` : ''}
+    </div>` : '';
+
+  document.getElementById('print-page').innerHTML = `
+    <div class="print-header">
+      <div>
+        <div class="print-title">Φαρμακείο — Συνταγές ΙΔΙΚΑ</div>
+        <div style="font-size:11px;color:#666;">Αυτόματη επεξεργασία</div>
+      </div>
+      <div class="print-meta">
+        Εκτύπωση: ${now}
+        ${name ? '<br>Ασθενής: '+name : ''}
+        ${amka ? '<br>ΑΜΚΑ: '+amka : ''}
+      </div>
+    </div>
+    ${patientBlock}
+    <div class="print-grid">${cards}</div>
+  `;
+
+  setTimeout(() => {
+    prescriptions.forEach((p,i) => {
+      try {
+        JsBarcode(`#bc-print-${i}`, p.code, {
+          format: 'CODE128', lineColor: '#000',
+          width: 1.8, height: 65, displayValue: false,
+          background: '#fff', margin: 4
+        });
+      } catch(e) {}
+    });
+  }, 150);
+}
+
+// ── Print via AirPrint ────────────────────────────────────────────
+document.getElementById('btn-print').addEventListener('click', () => {
+  buildPrintPage();
+  setTimeout(() => {
+    // Save to history
+    const entry = {
+      ts: new Date().toLocaleDateString('el-GR') + ' ' + new Date().toLocaleTimeString('el-GR',{hour:'2-digit',minute:'2-digit'}),
+      count: prescriptions.length,
+      patient: document.getElementById('patient-name').value.trim() || '—'
+    };
+    history.unshift(entry);
+    if (history.length > 50) history.pop();
+    localStorage.setItem('rx_history', JSON.stringify(history));
+
+    window.print();
+  }, 400);
+});
+
+// ── History ───────────────────────────────────────────────────────
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  if (!history.length) {
+    list.innerHTML = '<div class="empty"><div class="ei">📜</div><p>Δεν υπάρχουν εκτυπώσεις ακόμα</p></div>';
+    return;
+  }
+  list.innerHTML = history.map(h => `
+    <div class="history-row">
+      <div>
+        <div style="font-weight:500;">${h.patient}</div>
+        <div class="history-ts">${h.ts}</div>
+      </div>
+      <span class="history-badge">${h.count} συνταγ${h.count===1?'ή':'ές'}</span>
+    </div>
+  `).join('');
+}
+
+document.getElementById('btn-clear-history').addEventListener('click', () => {
+  history = [];
+  localStorage.setItem('rx_history', '[]');
+  renderHistory();
+  toast('Ιστορικό καθαρίστηκε', 'ok');
+});
+</script>
+</body>
+</html>
