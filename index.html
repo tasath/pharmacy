@@ -2,934 +2,1020 @@
 <html lang="el">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Συνταγές">
-<title>Συνταγές ΙΔΙΚΑ</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Φαρμακείο - Σκάνερ Συνταγών</title>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@500&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
-:root {
-  --green: #1a5f3f;
-  --green2: #2d8a5e;
-  --green-light: #e8f5ee;
-  --bg: #f2f2f7;
-  --surface: #ffffff;
-  --border: #e0e0e5;
-  --text: #1a1a2e;
-  --text2: #6b6b80;
-  --text3: #ababbb;
-  --danger: #d0021b;
-  --radius: 14px;
-}
-
-* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-
-body {
-  font-family: 'IBM Plex Sans', -apple-system, sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  overflow-x: hidden;
-}
-
-.app-header {
-  background: var(--green);
-  padding: 52px 20px 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.app-header .icon {
-  width: 40px; height: 40px;
-  background: rgba(255,255,255,0.2);
-  border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20px;
-}
-.app-header h1 { font-size: 20px; font-weight: 600; color: white; }
-.app-header p  { font-size: 12px; color: rgba(255,255,255,0.7); margin-top: 1px; }
-
-.screen { display: none; padding: 20px; padding-bottom: 90px; }
-.screen.active { display: block; }
-
-.card {
-  background: var(--surface);
-  border-radius: var(--radius);
-  overflow: hidden;
-  margin-bottom: 14px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-}
-.card-header {
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--border);
-  font-size: 13px; font-weight: 600;
-  color: var(--text2);
-  text-transform: uppercase; letter-spacing: 0.5px;
-  display: flex; justify-content: space-between; align-items: center;
-}
-.card-body { padding: 18px; }
-
-/* Camera */
-.camera-area {
-  width: 100%; aspect-ratio: 4/3;
-  background: #111;
-  border-radius: 12px; overflow: hidden;
-  position: relative; margin-bottom: 14px;
-}
-#video-el {
-  width: 100%; height: 100%;
-  object-fit: cover; display: block;
-}
-.cam-overlay {
-  position: absolute; inset: 0;
-  display: flex; align-items: center; justify-content: center;
-  pointer-events: none;
-}
-.scan-guide {
-  width: 82%; height: 58%;
-  border: 2px solid rgba(255,255,255,0.4);
-  border-radius: 10px; position: relative;
-}
-.scan-guide::before, .scan-guide::after,
-.scan-guide .c3, .scan-guide .c4 {
-  content: ''; position: absolute;
-  width: 24px; height: 24px;
-  border-color: #4ade80; border-style: solid;
-}
-.scan-guide::before { top:-2px; left:-2px; border-width:3px 0 0 3px; border-radius:5px 0 0 0; }
-.scan-guide::after  { top:-2px; right:-2px; border-width:3px 3px 0 0; border-radius:0 5px 0 0; }
-.scan-guide .c3 { bottom:-2px; left:-2px; border-width:0 0 3px 3px; border-radius:0 0 0 5px; }
-.scan-guide .c4 { bottom:-2px; right:-2px; border-width:0 3px 3px 0; border-radius:0 0 5px 0; }
-.scan-line {
-  position: absolute; width: 100%; height: 2px;
-  background: linear-gradient(90deg, transparent, #4ade80, transparent);
-  animation: scanMove 2s linear infinite;
-}
-@keyframes scanMove { 0%{top:0;opacity:1} 95%{opacity:1} 100%{top:100%;opacity:0} }
-.cam-hint {
-  position: absolute; bottom: 12px;
-  left: 50%; transform: translateX(-50%);
-  background: rgba(0,0,0,0.65); color: white;
-  font-size: 12px; padding: 5px 14px;
-  border-radius: 20px; white-space: nowrap;
-}
-
-/* Buttons */
-.btn-capture {
-  width: 100%; padding: 18px;
-  background: var(--green); color: white;
-  border: none; border-radius: 14px;
-  font-family: inherit; font-size: 18px; font-weight: 600;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center; gap: 10px;
-  transition: background 0.2s, transform 0.1s;
-  -webkit-appearance: none;
-}
-.btn-capture:active { background: var(--green2); transform: scale(0.98); }
-.btn-capture:disabled { opacity: 0.4; }
-
-.btn {
-  padding: 12px 20px; border-radius: 10px; border: none;
-  font-family: inherit; font-size: 15px; font-weight: 500;
-  cursor: pointer; transition: all 0.15s;
-  display: inline-flex; align-items: center; gap: 7px;
-  -webkit-appearance: none;
-}
-.btn-primary { background: var(--green); color: white; width: 100%; justify-content: center; padding: 15px; }
-.btn-primary:active { background: var(--green2); }
-.btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
-.btn-secondary:active { background: var(--bg); }
-.btn:disabled { opacity: 0.4; }
-.btn-row { display: flex; gap: 10px; margin-top: 12px; }
-.btn-row .btn { flex: 1; justify-content: center; }
-
-/* Status */
-.status-bar {
-  padding: 11px 16px; font-size: 13px;
-  border-radius: 10px; margin-bottom: 14px;
-  display: none; align-items: center; gap: 8px;
-}
-.status-bar.info    { background: #e8f0fe; color: #1a56c4; display: flex; }
-.status-bar.success { background: var(--green-light); color: var(--green); display: flex; }
-.status-bar.error   { background: #fff0f0; color: var(--danger); display: flex; }
-
-/* Patient fields */
-.patient-fields {
-  background: var(--green-light); border-radius: 12px;
-  padding: 16px; margin-bottom: 16px;
-  border: 1px solid #c5e0d0;
-  display: flex; flex-direction: column; gap: 12px;
-}
-.field-label { font-size: 12px; font-weight: 600; color: var(--green); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-.opt { font-size: 10px; color: var(--text3); font-weight: 400; text-transform: none; letter-spacing: 0; margin-left: 4px; }
-.field-input {
-  font-family: inherit; font-size: 15px;
-  padding: 11px 13px; border: 1px solid #c5e0d0;
-  border-radius: 9px; background: white; color: var(--text);
-  width: 100%; -webkit-appearance: none;
-}
-.field-input:focus { outline: none; border-color: var(--green2); }
-
-/* Rx rows */
-.rx-list { display: flex; flex-direction: column; gap: 10px; }
-.rx-row {
-  background: var(--bg); border-radius: 10px;
-  padding: 12px 14px; border: 1px solid var(--border);
-}
-.rx-code { font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 500; color: var(--green); margin-bottom: 4px; }
-.rx-input {
-  font-family: 'IBM Plex Mono', monospace; font-size: 13px;
-  padding: 7px 10px; border: 1px solid var(--border);
-  border-radius: 7px; background: white; width: 100%;
-  color: var(--text); -webkit-appearance: none;
-}
-.rx-label { font-size: 11px; color: var(--text3); font-weight: 500; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.4px; }
-.rx-field { display: flex; flex-direction: column; }
-.remove-btn {
-  background: none; border: none; color: var(--text3);
-  font-size: 20px; line-height: 1; cursor: pointer; padding: 2px 6px; border-radius: 6px;
-}
-.remove-btn:active { color: var(--danger); background: #fff0f0; }
-
-/* Barcode preview grid */
-.bc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
-.bc-card {
-  background: white; border: 1px solid var(--border);
-  border-radius: 10px; padding: 12px; text-align: center;
-}
-.bc-card canvas { max-width: 100%; height: auto !important; }
-.bc-num { font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 500; margin-top: 4px; }
-.bc-dates { font-size: 10px; color: var(--text2); margin-top: 2px; line-height: 1.5; }
-.bc-idx { font-size: 9px; color: var(--text3); margin-bottom: 4px; }
-
-/* History */
-.history-row {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 13px 18px; border-bottom: 1px solid var(--border); font-size: 14px;
-}
-.history-row:last-child { border-bottom: none; }
-.history-ts { font-size: 12px; color: var(--text3); }
-.history-badge { background: var(--green-light); color: var(--green); border-radius: 20px; padding: 2px 10px; font-size: 12px; font-weight: 600; }
-
-/* Bottom nav */
-.bottom-nav {
-  position: fixed; bottom: 0; left: 0; right: 0;
-  background: rgba(255,255,255,0.92);
-  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-  border-top: 1px solid var(--border);
-  display: flex; padding-bottom: env(safe-area-inset-bottom);
-}
-.nav-item {
-  flex: 1; display: flex; flex-direction: column; align-items: center;
-  padding: 10px 0 6px; cursor: pointer;
-  font-size: 10px; color: var(--text3); font-weight: 500;
-  border: none; background: none; font-family: inherit; transition: color 0.2s;
-}
-.nav-item.active { color: var(--green); }
-.nav-icon { font-size: 22px; margin-bottom: 2px; }
-
-/* Manual add */
-.manual-row { display: flex; gap: 8px; margin-top: 12px; padding-top: 14px; border-top: 1px solid var(--border); }
-.manual-row input {
-  flex: 1; font-family: 'IBM Plex Mono', monospace; font-size: 13px;
-  padding: 10px 12px; border: 1px solid var(--border);
-  border-radius: 9px; -webkit-appearance: none; color: var(--text);
-}
-
-/* Spinner */
-.spinner {
-  width: 18px; height: 18px; flex-shrink: 0;
-  border: 2px solid rgba(26,95,63,0.2);
-  border-top-color: var(--green);
-  border-radius: 50%; animation: spin 0.7s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* OCR progress */
-.ocr-progress {
-  background: var(--green-light); border-radius: 10px;
-  padding: 14px 16px; margin-bottom: 14px;
-  display: none; flex-direction: column; gap: 8px;
-}
-.ocr-progress.active { display: flex; }
-.progress-bar-wrap { background: #c5e0d0; border-radius: 20px; height: 6px; overflow: hidden; }
-.progress-bar { height: 100%; background: var(--green); border-radius: 20px; transition: width 0.3s; width: 0%; }
-.ocr-label { font-size: 13px; color: var(--green); font-weight: 500; }
-
-/* Toast */
-.toast {
-  position: fixed; bottom: 90px; left: 20px; right: 20px;
-  background: #1a1a2e; color: white;
-  padding: 13px 18px; border-radius: 12px;
-  font-size: 14px; text-align: center;
-  transform: translateY(20px); opacity: 0;
-  transition: all 0.3s; z-index: 999;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-}
-.toast.show { transform: translateY(0); opacity: 1; }
-.toast.ok  { background: var(--green); }
-.toast.err { background: var(--danger); }
-
-/* Empty */
-.empty { text-align: center; padding: 36px 20px; color: var(--text3); }
-.empty .ei { font-size: 40px; margin-bottom: 10px; }
-.empty p { font-size: 14px; }
-
-/* Print page */
-#print-page { display: none; }
-@media print {
-  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }
-  html { height: auto !important; }
-  body { height: auto !important; overflow: visible !important; margin: 0 !important; padding: 0 !important; min-height: 0 !important; }
-  body > * { display: none !important; }
-  #print-page {
-    display: block !important;
-    position: absolute !important;
-    top: 0 !important; left: 0 !important;
-    width: 100% !important;
-    font-family: Arial, sans-serif;
-    padding: 10px;
+  :root {
+    --bg: #f0f2f5;
+    --surface: #ffffff;
+    --surface2: #f7f8fa;
+    --border: #e2e5ea;
+    --accent: #1a5f3f;
+    --accent2: #2d8a5e;
+    --accent-light: #e8f5ee;
+    --text: #1a1e2e;
+    --text2: #5a6175;
+    --text3: #9aa0b0;
+    --danger: #c0392b;
+    --warning: #e67e22;
+    --success: #1a5f3f;
+    --radius: 10px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.07);
   }
-  .bottom-nav { display: none !important; }
-  .print-header { display: flex; justify-content: space-between; border-bottom: 2px solid #1a5f3f; padding-bottom: 7px; margin-bottom: 9px; }
-  .print-title { font-size: 14px; font-weight: 700; color: #1a5f3f; }
-  .print-meta  { font-size: 10px; color: #444; text-align: right; line-height: 1.5; }
-  .print-patient { background: #f0f7f3; padding: 5px 10px; font-size: 11px; margin-bottom: 9px; display:flex; gap:20px; }
-  .print-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .print-card { border: 1px solid #ccc; padding: 7px; text-align: center; page-break-inside: avoid; break-inside: avoid; }
-  .print-card canvas { max-width: 100% !important; height: auto !important; display: block; margin: 0 auto; }
-  .print-idx  { font-size: 9px; color: #888; margin-bottom: 2px; }
-  .print-code { font-family: 'Courier New', monospace; font-size: 10px; font-weight: 700; margin-top: 3px; letter-spacing: 1px; }
-  .print-dates { font-size: 10px; color: #444; margin-top: 2px; line-height: 1.4; }
-}
 
-#file-input { display: none; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--accent);
+    color: white;
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+
+  header .logo {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+  }
+
+  header .sub {
+    font-size: 13px;
+    opacity: 0.75;
+    font-weight: 300;
+  }
+
+  .cross {
+    width: 36px; height: 36px;
+    background: white;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .cross svg { width: 22px; height: 22px; fill: var(--accent); }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 28px 20px;
+  }
+
+  /* STEPS */
+  .steps {
+    display: flex;
+    gap: 0;
+    margin-bottom: 28px;
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .step {
+    flex: 1;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text3);
+    border-right: 1px solid var(--border);
+    transition: all 0.3s;
+  }
+
+  .step:last-child { border-right: none; }
+
+  .step.active {
+    background: var(--accent-light);
+    color: var(--accent);
+  }
+
+  .step.done {
+    color: var(--accent2);
+  }
+
+  .step-num {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    flex-shrink: 0;
+    transition: all 0.3s;
+  }
+
+  .step.active .step-num {
+    background: var(--accent);
+    color: white;
+  }
+
+  .step.done .step-num {
+    background: var(--accent2);
+    color: white;
+  }
+
+  /* PANELS */
+  .panel {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    display: none;
+  }
+
+  .panel.active { display: block; }
+
+  .panel-header {
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .panel-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .panel-body { padding: 24px; }
+
+  /* CAMERA */
+  .camera-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: #111;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+
+  #video {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .camera-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  .scan-frame {
+    width: 75%;
+    height: 60%;
+    border: 2px solid rgba(255,255,255,0.6);
+    border-radius: 8px;
+    position: relative;
+  }
+
+  .scan-frame::before, .scan-frame::after {
+    content: '';
+    position: absolute;
+    width: 20px; height: 20px;
+    border-color: #4ade80;
+    border-style: solid;
+  }
+
+  .scan-frame::before {
+    top: -2px; left: -2px;
+    border-width: 3px 0 0 3px;
+    border-radius: 4px 0 0 0;
+  }
+
+  .scan-frame::after {
+    bottom: -2px; right: -2px;
+    border-width: 0 3px 3px 0;
+    border-radius: 0 0 4px 0;
+  }
+
+  .scan-line {
+    position: absolute;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #4ade80, transparent);
+    animation: scanAnim 2s linear infinite;
+  }
+
+  @keyframes scanAnim {
+    0% { top: 0; opacity: 1; }
+    90% { opacity: 1; }
+    100% { top: 100%; opacity: 0; }
+  }
+
+  .ocr-status {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.7);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .camera-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  /* BUTTONS */
+  .btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+  }
+
+  .btn-primary:hover { background: var(--accent2); }
+
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  .btn-secondary:hover { background: var(--border); }
+
+  .btn-danger {
+    background: #fdf0ef;
+    color: var(--danger);
+    border: 1px solid #f5c6c2;
+  }
+
+  .btn-large {
+    padding: 14px 28px;
+    font-size: 16px;
+  }
+
+  .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  /* DETECTED NUMBERS */
+  .numbers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .number-row {
+    display: grid;
+    grid-template-columns: 1fr 140px 140px auto;
+    gap: 10px;
+    align-items: center;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+
+  .number-row.invalid {
+    border-color: #f5c6c2;
+    background: #fdf0ef;
+  }
+
+  .num-code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .num-input {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: white;
+    width: 100%;
+    color: var(--text);
+  }
+
+  .num-label {
+    font-size: 11px;
+    color: var(--text3);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+  }
+
+  .num-field { display: flex; flex-direction: column; }
+
+  .remove-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text3);
+    padding: 4px;
+    border-radius: 4px;
+    transition: color 0.2s;
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .remove-btn:hover { color: var(--danger); }
+
+  /* PATIENT FIELDS */
+  .patient-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding: 18px;
+    background: var(--accent-light);
+    border-radius: 8px;
+    border: 1px solid #c5e0d0;
+  }
+
+  .field-group { display: flex; flex-direction: column; gap: 5px; }
+
+  .field-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .field-input {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 14px;
+    padding: 9px 12px;
+    border: 1px solid #c5e0d0;
+    border-radius: 7px;
+    background: white;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .field-input:focus { border-color: var(--accent2); }
+
+  .optional-tag {
+    font-size: 10px;
+    color: var(--text3);
+    font-weight: 400;
+    margin-left: 4px;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text3);
+  }
+
+  .empty-state .icon { font-size: 36px; margin-bottom: 10px; }
+  .empty-state p { font-size: 14px; }
+
+  /* ACTIONS ROW */
+  .actions-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .spacer { flex: 1; }
+
+  /* ADD MANUAL */
+  .add-manual {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  .add-manual input {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    flex: 1;
+    outline: none;
+  }
+
+  .add-manual input:focus { border-color: var(--accent2); }
+
+  /* COUNT BADGE */
+  .count-badge {
+    background: var(--accent);
+    color: white;
+    border-radius: 12px;
+    padding: 2px 9px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--text);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 999;
+  }
+
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { background: var(--accent); }
+  .toast.error { background: var(--danger); }
+
+  /* PRINT STYLES */
+  @media print {
+    body { background: white; }
+    header, .steps, .panel, .toast { display: none !important; }
+    #print-area { display: block !important; }
+  }
+
+  #print-area {
+    display: none;
+  }
+
+  .print-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 2px solid #333;
+  }
+
+  .print-pharmacy {
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .print-meta {
+    font-size: 12px;
+    color: #444;
+    line-height: 1.7;
+    text-align: right;
+  }
+
+  .print-patient {
+    margin-bottom: 18px;
+    padding: 10px 14px;
+    background: #f5f5f5;
+    border-radius: 6px;
+    font-size: 13px;
+    display: flex;
+    gap: 30px;
+  }
+
+  .print-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .print-card {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 14px;
+    text-align: center;
+    page-break-inside: avoid;
+  }
+
+  .print-card canvas {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .print-num {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    margin-top: 6px;
+    letter-spacing: 1px;
+  }
+
+  .print-dates {
+    font-size: 11px;
+    color: #444;
+    margin-top: 4px;
+    line-height: 1.6;
+  }
+
+  .print-index {
+    font-size: 10px;
+    color: #888;
+    margin-bottom: 6px;
+  }
 </style>
 </head>
 <body>
 
-<div class="app-header">
-  <div class="icon">💊</div>
+<header>
+  <div class="cross">
+    <svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-7 14h-2v-4H6v-2h4V7h2v4h4v2h-4v4z"/></svg>
+  </div>
   <div>
-    <h1>Συνταγές ΙΔΙΚΑ</h1>
-    <p>Σάρωση · Barcodes · Εκτύπωση</p>
+    <div class="logo">Σκάνερ Συνταγών ΗΔΙΚΑ</div>
+    <div class="sub">Αυτόματη ανάγνωση & εκτύπωση Barcodes</div>
   </div>
-</div>
+</header>
 
-<!-- ══ SCREEN 1: SCAN ══ -->
-<div class="screen active" id="screen-scan">
-  <div style="height:10px"></div>
+<div class="container">
 
-  <div class="ocr-progress" id="ocr-prog">
-    <div class="ocr-label" id="ocr-label">Ανάλυση εικόνας...</div>
-    <div class="progress-bar-wrap"><div class="progress-bar" id="ocr-bar"></div></div>
-  </div>
-
-  <!-- BEFORE photo: just the two buttons -->
-  <div id="photo-btns">
-    <button class="btn-capture" id="btn-take-photo">📸 Φωτογράφισε το SMS</button>
-    <div style="text-align:center;color:var(--text3);font-size:12px;margin:8px 0;">ή</div>
-    <button class="btn btn-secondary" style="width:100%;justify-content:center;" id="btn-gallery">🖼 Επιλογή από Φωτοθήκη</button>
-    <div class="manual-row">
-      <input type="number" id="manual-code" placeholder="Χειρ. εισαγωγή (16 ψηφία)" maxlength="16">
-      <button class="btn btn-secondary" id="btn-manual">+</button>
+  <div class="steps">
+    <div class="step active" id="step1">
+      <div class="step-num">1</div>
+      Σάρωση SMS
+    </div>
+    <div class="step" id="step2">
+      <div class="step-num">2</div>
+      Έλεγχος & Ασθενής
+    </div>
+    <div class="step" id="step3">
+      <div class="step-num">3</div>
+      Εκτύπωση
     </div>
   </div>
 
-  <!-- AFTER photo: side-by-side layout -->
-  <div id="photo-preview-wrap" style="display:none;">
-
-    <!-- Action bar on top -->
-    <div style="display:flex;gap:8px;margin-bottom:10px;">
-      <button class="btn btn-secondary" id="btn-retake" style="flex:1;justify-content:center;">🔄 Νέα</button>
-      <button class="btn btn-primary" id="btn-analyze" style="flex:3;">🔍 Ανάλυση</button>
+  <!-- STEP 1: CAMERA -->
+  <div class="panel active" id="panel1">
+    <div class="panel-header">
+      <div class="panel-title">📷 Σάρωση SMS Συνταγής</div>
+      <div id="cam-badge" style="font-size:13px;color:var(--text3);">Κάμερα ανενεργή</div>
     </div>
-
-    <!-- Side by side: photo + OCR results -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start;">
-
-      <!-- Photo (compact) -->
-      <div>
-        <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Φωτογραφία</div>
-        <img id="photo-preview" style="width:100%;border-radius:8px;border:1px solid var(--border);display:block;">
+    <div class="panel-body">
+      <div class="camera-wrapper">
+        <video id="video" autoplay playsinline muted></video>
+        <div class="camera-overlay">
+          <div class="scan-frame">
+            <div class="scan-line"></div>
+          </div>
+        </div>
+        <div class="ocr-status" id="ocr-status">Πατήστε "Έναρξη Κάμερας"</div>
       </div>
 
-      <!-- OCR results live here -->
-      <div>
-        <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Αναγνωρίστηκαν</div>
-        <div id="ocr-results-panel">
-          <div style="color:var(--text3);font-size:13px;padding:10px 0;">Πατήστε Ανάλυση →</div>
+      <div class="camera-controls">
+        <button class="btn btn-primary" id="btn-start-cam">▶ Έναρξη Κάμερας</button>
+        <button class="btn btn-secondary" id="btn-capture" disabled>📸 Λήψη & Ανάλυση</button>
+        <button class="btn btn-secondary" id="btn-upload-img">🖼 Φόρτωση Εικόνας</button>
+        <input type="file" id="file-input" accept="image/*" style="display:none">
+      </div>
+
+      <div id="detecting-msg" style="display:none;padding:10px;background:var(--accent-light);border-radius:8px;font-size:13px;color:var(--accent);margin-bottom:12px;">
+        ⏳ Ανάλυση εικόνας... παρακαλώ περιμένετε.
+      </div>
+
+      <div class="add-manual">
+        <input type="text" id="manual-input" placeholder="Χειροκίνητη εισαγωγή αριθμού (16 ψηφία)" maxlength="16">
+        <button class="btn btn-secondary" id="btn-add-manual">+ Προσθήκη</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: REVIEW -->
+  <div class="panel" id="panel2">
+    <div class="panel-header">
+      <div class="panel-title">✅ Έλεγχος Συνταγών</div>
+      <span class="count-badge" id="count-badge">0 συνταγές</span>
+    </div>
+    <div class="panel-body">
+
+      <div class="patient-fields">
+        <div class="field-group">
+          <div class="field-label">Ασθενής <span class="optional-tag">(προαιρετικό)</span></div>
+          <input type="text" class="field-input" id="patient-name" placeholder="Ονοματεπώνυμο">
+        </div>
+        <div class="field-group">
+          <div class="field-label">ΑΜΚΑ <span class="optional-tag">(προαιρετικό)</span></div>
+          <input type="text" class="field-input" id="patient-amka" placeholder="ΑΜΚΑ ασθενούς" maxlength="11">
         </div>
       </div>
 
-    </div>
-
-    <div id="status-scan" class="status-bar" style="margin-top:10px;"></div>
-
-    <!-- Proceed button -->
-    <button class="btn btn-primary" id="btn-proceed-review" style="margin-top:10px;display:none;">
-      ✅ Προχώρηση με αυτές τις συνταγές →
-    </button>
-
-  </div>
-
-  <input type="file" id="file-input-camera" accept="image/*" capture="environment">
-  <input type="file" id="file-input-gallery" accept="image/*">
-</div>
-
-<!-- ══ SCREEN 2: REVIEW ══ -->
-<div class="screen" id="screen-review">
-  <div style="height:14px"></div>
-
-  <div class="patient-fields">
-    <div>
-      <div class="field-label">Ασθενής <span class="opt">(προαιρετικό)</span></div>
-      <input type="text" class="field-input" id="patient-name" placeholder="Ονοματεπώνυμο">
-    </div>
-    <div>
-      <div class="field-label">ΑΜΚΑ <span class="opt">(προαιρετικό)</span></div>
-      <input type="text" class="field-input" id="patient-amka" placeholder="ΑΜΚΑ" maxlength="11">
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-header">
-      <span>Συνταγές</span>
-      <span id="rx-badge" style="background:var(--green);color:white;border-radius:12px;padding:2px 10px;font-size:12px;font-weight:600;">0</span>
-    </div>
-    <div class="card-body">
-      <div class="rx-list" id="rx-list">
-        <div class="empty"><div class="ei">📋</div><p>Καμία συνταγή ακόμα</p></div>
+      <div class="numbers-list" id="numbers-list">
+        <div class="empty-state">
+          <div class="icon">📋</div>
+          <p>Δεν έχουν εντοπιστεί συνταγές ακόμα</p>
+        </div>
       </div>
-      <div class="manual-row">
-        <input type="number" id="manual-code2" placeholder="Προσθήκη αριθμού" maxlength="16">
-        <button class="btn btn-secondary" id="btn-manual2">+</button>
+
+      <div class="actions-row">
+        <button class="btn btn-secondary" id="btn-back">← Πίσω</button>
+        <div class="spacer"></div>
+        <button class="btn btn-primary btn-large" id="btn-proceed" disabled>Προς Εκτύπωση →</button>
       </div>
     </div>
   </div>
 
-  <button class="btn btn-primary" id="btn-to-print" disabled>
-    Προεπισκόπηση & Εκτύπωση →
-  </button>
-  <div class="btn-row">
-    <button class="btn btn-secondary" id="btn-back-scan">← Νέα Σάρωση</button>
-  </div>
-</div>
-
-<!-- ══ SCREEN 3: PRINT ══ -->
-<div class="screen" id="screen-print">
-  <div style="height:14px"></div>
-  <div id="status-print" class="status-bar"></div>
-
-  <div class="card">
-    <div class="card-header">Προεπισκόπηση Barcodes</div>
-    <div class="card-body">
-      <div class="bc-grid" id="bc-grid">
-        <div class="empty"><div class="ei">🔄</div><p>Φόρτωση...</p></div>
+  <!-- STEP 3: PRINT -->
+  <div class="panel" id="panel3">
+    <div class="panel-header">
+      <div class="panel-title">🖨 Εκτύπωση Barcodes</div>
+    </div>
+    <div class="panel-body">
+      <div id="preview-area" style="margin-bottom:20px;"></div>
+      <div class="actions-row">
+        <button class="btn btn-secondary" id="btn-back2">← Πίσω</button>
+        <div class="spacer"></div>
+        <button class="btn btn-secondary" id="btn-new">🔄 Νέα Συνταγή</button>
+        <button class="btn btn-primary btn-large" id="btn-print">🖨 Εκτύπωση</button>
       </div>
     </div>
   </div>
 
-  <button class="btn btn-primary" id="btn-print">
-    🖨 Εκτύπωση (AirPrint)
-  </button>
-  <div class="btn-row">
-    <button class="btn btn-secondary" id="btn-back-review">← Πίσω</button>
-    <button class="btn btn-secondary" id="btn-new">🔄 Νέα Συνταγή</button>
-  </div>
 </div>
 
-<!-- ══ SCREEN 4: HISTORY ══ -->
-<div class="screen" id="screen-history">
-  <div style="height:14px"></div>
-  <div class="card">
-    <div class="card-header">
-      <span>Ιστορικό Εκτυπώσεων</span>
-      <button class="btn btn-secondary" id="btn-clear-history" style="padding:4px 10px;font-size:12px;">Καθαρισμός</button>
-    </div>
-    <div id="history-list">
-      <div class="empty"><div class="ei">📜</div><p>Δεν υπάρχουν εκτυπώσεις ακόμα</p></div>
-    </div>
-  </div>
-</div>
-
-<!-- Bottom Nav -->
-<div class="bottom-nav">
-  <button class="nav-item active" data-screen="scan">
-    <div class="nav-icon">📷</div>Σάρωση
-  </button>
-  <button class="nav-item" data-screen="review">
-    <div class="nav-icon">✅</div>Έλεγχος
-  </button>
-  <button class="nav-item" data-screen="print">
-    <div class="nav-icon">🖨</div>Εκτύπωση
-  </button>
-  <button class="nav-item" data-screen="history">
-    <div class="nav-icon">📜</div>Ιστορικό
-  </button>
-</div>
-
-<!-- Hidden print page - rendered here, printed via AirPrint -->
-<div id="print-page"></div>
+<!-- PRINT AREA -->
+<div id="print-area"></div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-// ── State ─────────────────────────────────────────────────────────
-let prescriptions = [];
-let videoStream = null;
-let history = JSON.parse(localStorage.getItem('rx_history') || '[]');
+// ── State ──────────────────────────────────────────────────────────
+let stream = null;
+let prescriptions = []; // {code, ekdosi, lixis}
+let currentStep = 1;
 
-// ── Navigation ────────────────────────────────────────────────────
-function showScreen(name) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('screen-' + name).classList.add('active');
-  document.querySelector(`[data-screen="${name}"]`).classList.add('active');
-  if (name === 'history') renderHistory();
-  if (name === 'print')   buildPreview();
-}
-
-document.querySelectorAll('.nav-item').forEach(b => b.addEventListener('click', () => showScreen(b.dataset.screen)));
-document.getElementById('btn-back-scan').addEventListener('click',   () => showScreen('scan'));
-document.getElementById('btn-back-review').addEventListener('click', () => showScreen('review'));
-document.getElementById('btn-to-print').addEventListener('click',    () => showScreen('print'));
-document.getElementById('btn-new').addEventListener('click', () => {
-  prescriptions = [];
-  document.getElementById('patient-name').value = '';
-  document.getElementById('patient-amka').value = '';
-  renderRxList();
-  showScreen('scan');
-});
-
-// ── Toast ─────────────────────────────────────────────────────────
-function toast(msg, type='') {
+// ── Helpers ────────────────────────────────────────────────────────
+function showToast(msg, type='') {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.className = 'toast show ' + type;
   setTimeout(() => t.className = 'toast', 3000);
 }
 
-function setStatus(id, msg, type) {
-  const el = document.getElementById(id);
-  el.className = 'status-bar ' + type;
-  if (type === 'info') el.innerHTML = `<div class="spinner"></div>${msg}`;
-  else el.textContent = msg;
-}
-function clearStatus(id) { document.getElementById(id).className = 'status-bar'; }
-
-// ── Photo capture (native iOS camera) ────────────────────────────
-document.getElementById('btn-take-photo').addEventListener('click', () => {
-  document.getElementById('file-input-camera').click();
-});
-document.getElementById('btn-gallery').addEventListener('click', () => {
-  document.getElementById('file-input-gallery').click();
-});
-
-function handleFileInput(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => showPhotoPreview(ev.target.result);
-  reader.readAsDataURL(file);
-  e.target.value = '';
+function goStep(n) {
+  currentStep = n;
+  [1,2,3].forEach(i => {
+    document.getElementById('panel'+i).classList.toggle('active', i===n);
+    const s = document.getElementById('step'+i);
+    s.classList.remove('active','done');
+    if (i===n) s.classList.add('active');
+    else if (i<n) s.classList.add('done');
+  });
 }
 
-document.getElementById('file-input-camera').addEventListener('change', handleFileInput);
-document.getElementById('file-input-gallery').addEventListener('change', handleFileInput);
-
-function showPhotoPreview(dataUrl) {
-  document.getElementById('photo-preview').src = dataUrl;
-  document.getElementById('photo-preview-wrap').style.display = 'block';
-  document.getElementById('photo-btns').style.display = 'none';
-  clearStatus('status-scan');
+function parseDate(str) {
+  // DD/MM/YYYY
+  const parts = str.split('/');
+  if (parts.length===3) return new Date(parts[2], parts[1]-1, parts[0]);
+  return null;
 }
 
-document.getElementById('btn-retake').addEventListener('click', () => {
-  document.getElementById('photo-preview-wrap').style.display = 'none';
-  document.getElementById('photo-btns').style.display = 'block';
-});
-
-document.getElementById('btn-analyze').addEventListener('click', () => {
-  const src = document.getElementById('photo-preview').src;
-  runOCR(src);
-});
-
-// ── OCR (runs in browser via Tesseract.js) ────────────────────────
-async function runOCR(dataUrl) {
-  const prog = document.getElementById('ocr-prog');
-  const label = document.getElementById('ocr-label');
-  const bar = document.getElementById('ocr-bar');
-  prog.classList.add('active');
-  document.getElementById('btn-analyze').disabled = true;
-  clearStatus('status-scan');
-
-  try {
-    label.textContent = 'Αποστολή στο Google Vision...';
-    bar.style.width = '20%';
-
-    // Extract base64 data (remove data:image/...;base64, prefix)
-    const base64 = dataUrl.split(',')[1];
-
-    const response = await fetch(
-      'https://vision.googleapis.com/v1/images:annotate?key=AIzaSyA1bD5akYimOEtE9SMvVi6vqTPJgkb1yw4',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          requests: [{
-            image: { content: base64 },
-            features: [{ type: 'TEXT_DETECTION', maxResults: 1 }],
-            imageContext: { languageHints: ['el', 'en'] }
-          }]
-        })
-      }
-    );
-
-    bar.style.width = '80%';
-    const data = await response.json();
-
-    if (data.error) throw new Error(data.error.message);
-
-    const annotation = data.responses?.[0]?.fullTextAnnotation;
-    const rawText = annotation?.text || '';
-
-    console.log('Google Vision raw text:', rawText);
-
-    prog.classList.remove('active');
-    bar.style.width = '0%';
-
-    const found = extractPrescriptions(rawText);
-
-    if (found.length > 0) {
-      showOCRResults(found);
-    } else {
-      setStatus('status-scan', '⚠️ Δεν βρέθηκαν αριθμοί. Δοκιμάστε πιο κοντά με καλό φωτισμό.', 'error');
-      showOCRResults([]);
-    }
-
-  } catch(e) {
-    prog.classList.remove('active');
-    bar.style.width = '0%';
-    setStatus('status-scan', '❌ Σφάλμα: ' + e.message, 'error');
-    console.error(e);
-  }
-
-  document.getElementById('btn-analyze').disabled = false;
-}
-
-// ── Show OCR results in side panel ───────────────────────────────
-function showOCRResults(found) {
-  const panel = document.getElementById('ocr-results-panel');
-  const proceedBtn = document.getElementById('btn-proceed-review');
-
-  if (!found.length) {
-    panel.innerHTML = '<div style="color:var(--danger);font-size:13px;padding:8px 0;">Δεν βρέθηκαν αριθμοί</div>';
-    proceedBtn.style.display = 'none';
-    return;
-  }
-
-  panel.innerHTML = found.map((p, i) => `
-    <div style="background:var(--green-light);border:1px solid #c5e0d0;border-radius:8px;padding:8px 10px;margin-bottom:8px;">
-      <div style="font-size:10px;color:var(--text3);margin-bottom:3px;">Συνταγή ${i+1}</div>
-      <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:var(--green);word-break:break-all;">${p.code}</div>
-      ${p.ekdosi ? `<div style="font-size:11px;color:var(--text2);margin-top:3px;">📅 ${p.ekdosi}</div>` : ''}
-      ${p.lixis  ? `<div style="font-size:11px;color:var(--text2);">⏰ ${p.lixis}</div>` : ''}
-    </div>
-  `).join('');
-
-  proceedBtn.style.display = 'block';
-  proceedBtn.onclick = () => {
-    found.forEach(p => {
-      if (!prescriptions.find(x => x.code === p.code)) prescriptions.push(p);
-    });
-    sortPrescriptions();
-    renderRxList();
-    // Reset scan screen
-    document.getElementById('photo-preview-wrap').style.display = 'none';
-    document.getElementById('photo-btns').style.display = 'block';
-    document.getElementById('ocr-results-panel').innerHTML = '<div style="color:var(--text3);font-size:13px;padding:10px 0;">Πατήστε Ανάλυση →</div>';
-    proceedBtn.style.display = 'none';
-    showScreen('review');
-  };
-}
-
-// ── Extract prescriptions from OCR text ──────────────────────────
+// ── OCR Extraction ─────────────────────────────────────────────────
 function extractPrescriptions(text) {
+  console.log('OCR raw:', text);
   const found = [];
 
-  // Normalize common OCR mistakes: apply ONLY to sequences that look like digit runs
-  // to avoid corrupting real Greek text
-  function normalizeDigits(s) {
-    return s
-      .replace(/(?<=[#\s])([0-9oOlI|sSBbzZ]{10,18})(?=[\s\n\/]|$)/g, seq =>
-        seq.replace(/[oO]/g,'0').replace(/[lI|]/g,'1').replace(/[sS]/g,'5').replace(/[bB]/g,'8').replace(/[zZ]/g,'2')
-      );
-  }
-
-  const t = normalizeDigits(text);
-
-  // Strategy 1: # followed by 10-16 digits (with optional spaces — OCR sometimes splits)
-  // No requirement for any specific text before #
-  const hashCode = /#\s*([0-9]{10,16})/g;
-
-  // Strategy 2: fuzzy — # followed by digit-like chars
-  const fuzzyCode = /#\s*([0-9oOlI|sSBbzZ]{10,18})/g;
-
-  // Strategy 3: standalone 16-digit number anywhere (no # needed)
-  const bareRx = /(?<![\d])([0-9]{16})(?![\d])/g;
-
-  // Strategy 4: 16 digits split across two lines by OCR (e.g. "26032736
-23318101")
-  const splitRx = /([0-9]{6,10})\n([0-9]{6,10})/g;
-
-  const dateRx = /(\d{2}\/\d{2}\/\d{4})/g;
-
-  let m;
+  // Step 1: find all 16-digit codes (preceded by # or standalone)
+  const codeRegex = /#\s*(\d{10,16})/g;
   const codes = [];
-
-  // Run all strategies on both original and normalized text
-  for (const src of [text, t]) {
-    hashCode.lastIndex = 0; fuzzyCode.lastIndex = 0; bareRx.lastIndex = 0; splitRx.lastIndex = 0;
-
-    while ((m = hashCode.exec(src)) !== null) {
-      if (!codes.find(c => c.code === m[1])) codes.push({ code: m[1], pos: m.index });
-    }
-    while ((m = fuzzyCode.exec(src)) !== null) {
-      const clean = m[1].replace(/[oO]/g,'0').replace(/[lI|]/g,'1').replace(/[sS]/g,'5').replace(/[bB]/g,'8').replace(/[zZ]/g,'2');
-      if (/^\d{10,16}$/.test(clean) && !codes.find(c => c.code === clean))
-        codes.push({ code: clean, pos: m.index });
-    }
-    while ((m = bareRx.exec(src)) !== null) {
-      if (!codes.find(c => c.code === m[1])) codes.push({ code: m[1], pos: m.index });
-    }
-    while ((m = splitRx.exec(src)) !== null) {
-      const joined = m[1] + m[2];
-      if (joined.length >= 10 && joined.length <= 16 && !codes.find(c => c.code === joined))
-        codes.push({ code: joined, pos: m.index });
+  let m;
+  while ((m = codeRegex.exec(text)) !== null) {
+    codes.push({ code: m[1], pos: m.index });
+  }
+  // Also catch codes not preceded by # (OCR might miss the #)
+  const bareCode = /(?<![#\d])(\d{16})(?!\d)/g;
+  while ((m = bareCode.exec(text)) !== null) {
+    if (!codes.find(c => c.code === m[1])) {
+      codes.push({ code: m[1], pos: m.index });
     }
   }
+  // Sort by position in text
+  codes.sort((a, b) => a.pos - b.pos);
 
-  codes.sort((a,b) => a.pos - b.pos);
-
-  // Find all dates
+  // Step 2: find all dates in text (DD/MM/YYYY)
+  const dateRegex = /(\d{2}\/\d{2}\/\d{4})/g;
   const dates = [];
-  for (const src of [text, t]) {
-    dateRx.lastIndex = 0;
-    while ((m = dateRx.exec(src)) !== null) {
-      if (!dates.find(d => d.date === m[1] && Math.abs(d.pos - m.index) < 5))
-        dates.push({ date: m[1], pos: m.index });
-    }
+  while ((m = dateRegex.exec(text)) !== null) {
+    dates.push({ date: m[1], pos: m.index });
   }
-  dates.sort((a,b) => a.pos - b.pos);
 
+  // Step 3: for each code, find the next 2 dates after it
   codes.forEach(c => {
-    const next = dates.filter(d => d.pos > c.pos).slice(0, 2);
-    found.push({ code: c.code, ekdosi: next[0]?.date || '', lixis: next[1]?.date || '' });
+    const nextDates = dates.filter(d => d.pos > c.pos).slice(0, 2);
+    const ekdosi = nextDates[0] ? nextDates[0].date : '';
+    const lixis  = nextDates[1] ? nextDates[1].date : '';
+    found.push({ code: c.code, ekdosi, lixis });
   });
 
+  console.log('Extracted:', found);
   return found;
 }
 
-// ── Rx list ───────────────────────────────────────────────────────
-function parseDate(s) {
-  if (!s) return null;
-  const p = s.split('/');
-  return p.length === 3 ? new Date(p[2], p[1]-1, p[0]) : null;
-}
-
-function sortPrescriptions() {
-  prescriptions.sort((a,b) => {
+function mergePrescriptions(newOnes) {
+  newOnes.forEach(p => {
+    if (!prescriptions.find(x => x.code === p.code)) {
+      prescriptions.push(p);
+    }
+  });
+  // Sort by ekdosi date ascending
+  prescriptions.sort((a, b) => {
     const da = parseDate(a.ekdosi), db = parseDate(b.ekdosi);
-    if (!da && !db) return 0; if (!da) return 1; if (!db) return -1;
+    if (!da && !db) return 0;
+    if (!da) return 1;
+    if (!db) return -1;
     return da - db;
   });
+  renderNumbersList();
 }
 
-function renderRxList() {
-  const list = document.getElementById('rx-list');
-  document.getElementById('rx-badge').textContent = prescriptions.length;
-  document.getElementById('btn-to-print').disabled = prescriptions.length === 0;
+// ── Camera ─────────────────────────────────────────────────────────
+document.getElementById('btn-start-cam').addEventListener('click', async () => {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: {ideal:1280}, height: {ideal:720} } });
+    document.getElementById('video').srcObject = stream;
+    document.getElementById('btn-capture').disabled = false;
+    document.getElementById('cam-badge').textContent = '🟢 Κάμερα ενεργή';
+    document.getElementById('ocr-status').textContent = 'Στρέψτε στο SMS και πατήστε Λήψη';
+    document.getElementById('btn-start-cam').disabled = true;
+  } catch(e) {
+    showToast('Δεν ήταν δυνατή η πρόσβαση στην κάμερα', 'error');
+  }
+});
 
-  if (!prescriptions.length) {
-    list.innerHTML = '<div class="empty"><div class="ei">📋</div><p>Καμία συνταγή ακόμα</p></div>';
+document.getElementById('btn-capture').addEventListener('click', () => {
+  captureAndAnalyze();
+});
+
+async function captureAndAnalyze() {
+  const video = document.getElementById('video');
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  await runOCR(canvas.toDataURL('image/png'));
+}
+
+// Upload image
+document.getElementById('btn-upload-img').addEventListener('click', () => {
+  document.getElementById('file-input').click();
+});
+
+document.getElementById('file-input').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (ev) => { await runOCR(ev.target.result); };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+});
+
+async function runOCR(imageData) {
+  document.getElementById('detecting-msg').style.display = 'block';
+  document.getElementById('ocr-status').textContent = 'Ανάλυση...';
+  document.getElementById('btn-capture').disabled = true;
+
+  try {
+    const result = await Tesseract.recognize(imageData, 'ell+eng', {
+      logger: m => {
+        if (m.status === 'recognizing text') {
+          document.getElementById('ocr-status').textContent = `Ανάλυση ${Math.round(m.progress*100)}%`;
+        }
+      }
+    });
+
+    const found = extractPrescriptions(result.data.text);
+    document.getElementById('detecting-msg').style.display = 'none';
+
+    if (found.length > 0) {
+      mergePrescriptions(found);
+      showToast(`✅ Βρέθηκαν ${found.length} συνταγές!`, 'success');
+      document.getElementById('ocr-status').textContent = `Βρέθηκαν ${found.length} συνταγές`;
+      goStep(2);
+    } else {
+      showToast('Δεν βρέθηκαν αριθμοί συνταγών. Δοκιμάστε ξανά.', 'error');
+      document.getElementById('ocr-status').textContent = 'Δεν βρέθηκαν. Δοκιμάστε ξανά.';
+    }
+  } catch(e) {
+    document.getElementById('detecting-msg').style.display = 'none';
+    showToast('Σφάλμα ανάλυσης: ' + e.message, 'error');
+  }
+
+  document.getElementById('btn-capture').disabled = false;
+}
+
+// ── Manual input ───────────────────────────────────────────────────
+document.getElementById('btn-add-manual').addEventListener('click', addManual);
+document.getElementById('manual-input').addEventListener('keydown', e => { if(e.key==='Enter') addManual(); });
+
+function addManual() {
+  const val = document.getElementById('manual-input').value.trim().replace(/\s+/g,'');
+  if (!/^\d{10,16}$/.test(val)) { showToast('Ο αριθμός πρέπει να είναι 10-16 ψηφία', 'error'); return; }
+  if (prescriptions.find(p => p.code===val)) { showToast('Ο αριθμός υπάρχει ήδη', 'error'); return; }
+  mergePrescriptions([{ code: val, ekdosi: '', lixis: '' }]);
+  document.getElementById('manual-input').value = '';
+  showToast('Προστέθηκε!', 'success');
+  goStep(2);
+}
+
+// ── Render list ────────────────────────────────────────────────────
+function renderNumbersList() {
+  const list = document.getElementById('numbers-list');
+  const badge = document.getElementById('count-badge');
+  badge.textContent = prescriptions.length + ' συνταγ' + (prescriptions.length===1?'ή':'ές');
+
+  if (prescriptions.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="icon">📋</div><p>Δεν έχουν εντοπιστεί συνταγές ακόμα</p></div>';
+    document.getElementById('btn-proceed').disabled = true;
     return;
   }
 
   list.innerHTML = prescriptions.map((p,i) => `
-    <div class="rx-row">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div class="rx-code">#${p.code}</div>
-        <button class="remove-btn" onclick="removeRx(${i})">✕</button>
+    <div class="number-row" id="row-${i}">
+      <div class="num-field">
+        <div class="num-label">Αριθμός Συνταγής</div>
+        <input class="num-input" value="${p.code}" onchange="prescriptions[${i}].code=this.value;checkRows()" maxlength="16">
       </div>
-      <div class="rx-field" style="margin-top:6px;">
-        <div class="rx-label">Αριθμός</div>
-        <input class="rx-input" value="${p.code}" onchange="prescriptions[${i}].code=this.value" maxlength="16">
+      <div class="num-field">
+        <div class="num-label">Ημ. Έκδοσης</div>
+        <input class="num-input" value="${p.ekdosi}" placeholder="ΗΗ/ΜΜ/ΕΕΕΕ" onchange="prescriptions[${i}].ekdosi=this.value">
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
-        <div class="rx-field">
-          <div class="rx-label">Έκδοση</div>
-          <input class="rx-input" value="${p.ekdosi}" placeholder="ΗΗ/ΜΜ/ΕΕΕΕ" onchange="prescriptions[${i}].ekdosi=this.value;sortPrescriptions();renderRxList()">
-        </div>
-        <div class="rx-field">
-          <div class="rx-label">Λήξη</div>
-          <input class="rx-input" value="${p.lixis}" placeholder="ΗΗ/ΜΜ/ΕΕΕΕ" onchange="prescriptions[${i}].lixis=this.value">
-        </div>
+      <div class="num-field">
+        <div class="num-label">Ημ. Λήξης</div>
+        <input class="num-input" value="${p.lixis}" placeholder="ΗΗ/ΜΜ/ΕΕΕΕ" onchange="prescriptions[${i}].lixis=this.value">
       </div>
+      <button class="remove-btn" onclick="removePrescription(${i})">✕</button>
     </div>
   `).join('');
+
+  document.getElementById('btn-proceed').disabled = prescriptions.length === 0;
 }
 
-function removeRx(i) { prescriptions.splice(i,1); renderRxList(); }
+function checkRows() { renderNumbersList(); }
 
-function addManual(inputId) {
-  const input = document.getElementById(inputId);
-  const val = input.value.trim();
-  if (!/^\d{10,16}$/.test(val)) { toast('Εισάγετε 10-16 ψηφία', 'err'); return; }
-  if (prescriptions.find(p => p.code === val)) { toast('Υπάρχει ήδη', 'err'); return; }
-  prescriptions.push({ code: val, ekdosi: '', lixis: '' });
-  renderRxList(); input.value = '';
-  toast('Προστέθηκε!', 'ok');
-  showScreen('review');
+function removePrescription(i) {
+  prescriptions.splice(i, 1);
+  renderNumbersList();
 }
 
-document.getElementById('btn-manual').addEventListener('click',  () => addManual('manual-code'));
-document.getElementById('btn-manual2').addEventListener('click', () => addManual('manual-code2'));
+// ── Navigation ─────────────────────────────────────────────────────
+document.getElementById('btn-back').addEventListener('click', () => goStep(1));
+document.getElementById('btn-back2').addEventListener('click', () => goStep(2));
 
-// ── Preview barcodes ──────────────────────────────────────────────
+document.getElementById('btn-proceed').addEventListener('click', () => {
+  buildPreview();
+  goStep(3);
+});
+
+document.getElementById('btn-new').addEventListener('click', () => {
+  prescriptions = [];
+  document.getElementById('patient-name').value = '';
+  document.getElementById('patient-amka').value = '';
+  renderNumbersList();
+  goStep(1);
+});
+
+// ── Preview & Print ────────────────────────────────────────────────
 function buildPreview() {
-  const grid = document.getElementById('bc-grid');
-  if (!prescriptions.length) {
-    grid.innerHTML = '<div class="empty"><p>Δεν υπάρχουν συνταγές</p></div>';
-    return;
-  }
-  grid.innerHTML = prescriptions.map((p,i) => `
-    <div class="bc-card">
-      <div class="bc-idx">Συνταγή ${i+1}/${prescriptions.length}</div>
-      <canvas id="bc-prev-${i}"></canvas>
-      <div class="bc-num">${p.code}</div>
-      <div class="bc-dates">
-        ${p.ekdosi ? 'Έκδοση: '+p.ekdosi : ''}
-        ${p.ekdosi && p.lixis ? '<br>' : ''}
-        ${p.lixis ? 'Λήξη: '+p.lixis : ''}
-      </div>
-    </div>
-  `).join('');
+  const name = document.getElementById('patient-name').value.trim();
+  const amka = document.getElementById('patient-amka').value.trim();
+  const now = new Date().toLocaleDateString('el-GR') + ' ' + new Date().toLocaleTimeString('el-GR', {hour:'2-digit',minute:'2-digit'});
 
+  let html = `
+    <div style="font-family:'IBM Plex Sans',sans-serif;padding:20px;background:white;border:1px solid #ddd;border-radius:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #1a5f3f;">
+        <div>
+          <div style="font-size:18px;font-weight:700;color:#1a5f3f;">Φαρμακείο</div>
+          <div style="font-size:12px;color:#666;margin-top:2px;">Συνταγές ΙΔΙΚΑ</div>
+        </div>
+        <div style="font-size:12px;color:#444;text-align:right;line-height:1.7;">
+          <div>Εκτύπωση: ${now}</div>
+          ${name ? `<div><strong>Ασθενής:</strong> ${name}</div>` : ''}
+          ${amka ? `<div><strong>ΑΜΚΑ:</strong> ${amka}</div>` : ''}
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+  `;
+
+  prescriptions.forEach((p, i) => {
+    html += `
+      <div style="border:1px solid #ddd;border-radius:6px;padding:14px;text-align:center;">
+        <div style="font-size:10px;color:#888;margin-bottom:4px;">Συνταγή ${i+1} από ${prescriptions.length}</div>
+        <canvas id="bc-${i}"></canvas>
+        <div style="font-family:'Courier New',monospace;font-size:11px;font-weight:700;margin-top:5px;letter-spacing:1px;">${p.code}</div>
+        <div style="font-size:11px;color:#444;margin-top:3px;line-height:1.6;">
+          ${p.ekdosi ? `Έκδοση: ${p.ekdosi}` : ''}${p.ekdosi && p.lixis ? '<br>' : ''}${p.lixis ? `Λήξη: ${p.lixis}` : ''}
+        </div>
+      </div>
+    `;
+  });
+
+  html += `</div></div>`;
+  document.getElementById('preview-area').innerHTML = html;
+
+  // Generate barcodes
   setTimeout(() => {
-    prescriptions.forEach((p,i) => {
+    prescriptions.forEach((p, i) => {
       try {
-        JsBarcode(`#bc-prev-${i}`, p.code, {
-          format: 'CODE128', lineColor: '#000',
-          width: 1.5, height: 55, displayValue: false,
-          background: '#fff', margin: 4
+        JsBarcode('#bc-'+i, p.code, {
+          format: 'CODE128',
+          lineColor: '#000',
+          width: 1.5,
+          height: 60,
+          displayValue: false,
+          background: '#ffffff',
+          margin: 4
         });
-      } catch(e) { console.error(e); }
+      } catch(e) { console.error('Barcode error', e); }
     });
-    buildPrintPage();
+    buildPrintArea(name, amka, now);
   }, 100);
 }
 
-// ── Build hidden print page ───────────────────────────────────────
-function buildPrintPage() {
-  const name = document.getElementById('patient-name').value.trim();
-  const amka = document.getElementById('patient-amka').value.trim();
-  const now  = new Date().toLocaleDateString('el-GR') + ' ' + new Date().toLocaleTimeString('el-GR', {hour:'2-digit',minute:'2-digit'});
-
-  let cards = '';
-  prescriptions.forEach((p,i) => {
-    cards += `
-      <div class="print-card">
-        <div class="print-idx">Συνταγή ${i+1} από ${prescriptions.length}</div>
-        <canvas id="bc-print-${i}"></canvas>
-        <div class="print-code">${p.code}</div>
-        <div class="print-dates">
-          ${p.ekdosi ? 'Έκδοση: '+p.ekdosi : ''}
-          ${p.ekdosi && p.lixis ? '<br>' : ''}
-          ${p.lixis ? 'Λήξη: '+p.lixis : ''}
+function buildPrintArea(name, amka, now) {
+  let html = `
+    <div style="font-family:Arial,sans-serif;padding:20px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid #1a5f3f;">
+        <div style="font-size:18px;font-weight:700;">Φαρμακείο — Συνταγές ΙΔΙΚΑ</div>
+        <div style="font-size:12px;text-align:right;line-height:1.7;">
+          <div>Εκτύπωση: ${now}</div>
+          ${name ? `<div>Ασθενής: ${name}</div>` : ''}
+          ${amka ? `<div>ΑΜΚΑ: ${amka}</div>` : ''}
         </div>
-      </div>`;
-  });
-
-  const patientBlock = (name || amka) ? `
-    <div class="print-patient">
-      ${name ? `<span><strong>Ασθενής:</strong> ${name}</span>` : ''}
-      ${amka ? `<span><strong>ΑΜΚΑ:</strong> ${amka}</span>` : ''}
-    </div>` : '';
-
-  document.getElementById('print-page').innerHTML = `
-    <div class="print-header">
-      <div>
-        <div class="print-title">Φαρμακείο — Συνταγές ΙΔΙΚΑ</div>
-        <div style="font-size:11px;color:#666;">Αυτόματη επεξεργασία</div>
       </div>
-      <div class="print-meta">
-        Εκτύπωση: ${now}
-        ${name ? '<br>Ασθενής: '+name : ''}
-        ${amka ? '<br>ΑΜΚΑ: '+amka : ''}
-      </div>
-    </div>
-    ${patientBlock}
-    <div class="print-grid">${cards}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
   `;
 
+  prescriptions.forEach((p, i) => {
+    html += `
+      <div style="border:1px solid #ccc;padding:12px;text-align:center;break-inside:avoid;">
+        <div style="font-size:10px;color:#888;margin-bottom:4px;">Συνταγή ${i+1} από ${prescriptions.length}</div>
+        <canvas id="pbc-${i}"></canvas>
+        <div style="font-family:'Courier New',monospace;font-size:11px;font-weight:700;margin-top:4px;">${p.code}</div>
+        <div style="font-size:11px;color:#444;margin-top:3px;line-height:1.6;">
+          ${p.ekdosi ? `Έκδοση: ${p.ekdosi}` : ''}${p.ekdosi && p.lixis ? '<br>' : ''}${p.lixis ? `Λήξη: ${p.lixis}` : ''}
+        </div>
+      </div>
+    `;
+  });
+
+  html += `</div></div>`;
+  document.getElementById('print-area').innerHTML = html;
+
   setTimeout(() => {
-    prescriptions.forEach((p,i) => {
+    prescriptions.forEach((p, i) => {
       try {
-        JsBarcode(`#bc-print-${i}`, p.code, {
-          format: 'CODE128', lineColor: '#000',
-          width: 1.8, height: 65, displayValue: false,
-          background: '#fff', margin: 4
+        JsBarcode('#pbc-'+i, p.code, {
+          format: 'CODE128', lineColor: '#000', width: 1.5, height: 60,
+          displayValue: false, background: '#ffffff', margin: 4
         });
       } catch(e) {}
     });
-  }, 150);
+  }, 100);
 }
 
-// ── Print via AirPrint ────────────────────────────────────────────
 document.getElementById('btn-print').addEventListener('click', () => {
-  buildPrintPage();
-  setTimeout(() => {
-    // Save to history
-    const entry = {
-      ts: new Date().toLocaleDateString('el-GR') + ' ' + new Date().toLocaleTimeString('el-GR',{hour:'2-digit',minute:'2-digit'}),
-      count: prescriptions.length,
-      patient: document.getElementById('patient-name').value.trim() || '—'
-    };
-    history.unshift(entry);
-    if (history.length > 50) history.pop();
-    localStorage.setItem('rx_history', JSON.stringify(history));
-
-    window.print();
-  }, 400);
-});
-
-// ── History ───────────────────────────────────────────────────────
-function renderHistory() {
-  const list = document.getElementById('history-list');
-  if (!history.length) {
-    list.innerHTML = '<div class="empty"><div class="ei">📜</div><p>Δεν υπάρχουν εκτυπώσεις ακόμα</p></div>';
-    return;
-  }
-  list.innerHTML = history.map(h => `
-    <div class="history-row">
-      <div>
-        <div style="font-weight:500;">${h.patient}</div>
-        <div class="history-ts">${h.ts}</div>
-      </div>
-      <span class="history-badge">${h.count} συνταγ${h.count===1?'ή':'ές'}</span>
-    </div>
-  `).join('');
-}
-
-document.getElementById('btn-clear-history').addEventListener('click', () => {
-  history = [];
-  localStorage.setItem('rx_history', '[]');
-  renderHistory();
-  toast('Ιστορικό καθαρίστηκε', 'ok');
+  window.print();
 });
 </script>
 </body>
