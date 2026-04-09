@@ -282,25 +282,29 @@ body {
 /* Print page */
 #print-page { display: none; }
 @media print {
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  html, body { height: auto !important; overflow: visible !important; margin: 0; padding: 0; }
   body > *:not(#print-page) { display: none !important; }
   #print-page {
     display: block !important;
     font-family: Arial, sans-serif;
-    padding: 16px;
+    padding: 12px;
+    page-break-after: avoid;
   }
   .print-header {
     display: flex; justify-content: space-between;
     border-bottom: 2px solid #1a5f3f;
-    padding-bottom: 10px; margin-bottom: 14px;
+    padding-bottom: 8px; margin-bottom: 10px;
   }
-  .print-title { font-size: 17px; font-weight: 700; color: #1a5f3f; }
-  .print-meta  { font-size: 11px; color: #444; text-align: right; line-height: 1.7; }
-  .print-patient { background: #f0f7f3; padding: 8px 12px; border-radius: 5px; font-size: 12px; margin-bottom: 14px; }
-  .print-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  .print-card { border: 1px solid #ccc; border-radius: 6px; padding: 12px; text-align: center; page-break-inside: avoid; }
-  .print-idx  { font-size: 10px; color: #888; margin-bottom: 4px; }
-  .print-code { font-family: 'Courier New', monospace; font-size: 11px; font-weight: 700; margin-top: 5px; letter-spacing: 1px; }
-  .print-dates { font-size: 11px; color: #444; margin-top: 3px; line-height: 1.6; }
+  .print-title { font-size: 15px; font-weight: 700; color: #1a5f3f; }
+  .print-meta  { font-size: 10px; color: #444; text-align: right; line-height: 1.6; }
+  .print-patient { background: #f0f7f3; padding: 6px 10px; border-radius: 5px; font-size: 11px; margin-bottom: 10px; display:flex; gap:20px; }
+  .print-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .print-card { border: 1px solid #ccc; border-radius: 5px; padding: 8px; text-align: center; page-break-inside: avoid; break-inside: avoid; }
+  .print-card canvas { max-width: 100% !important; height: auto !important; }
+  .print-idx  { font-size: 9px; color: #888; margin-bottom: 3px; }
+  .print-code { font-family: 'Courier New', monospace; font-size: 10px; font-weight: 700; margin-top: 4px; letter-spacing: 1px; }
+  .print-dates { font-size: 10px; color: #444; margin-top: 2px; line-height: 1.5; }
 }
 
 #file-input { display: none; }
@@ -329,24 +333,23 @@ body {
   <div class="card">
     <div class="card-header">📷 Φωτογράφιση SMS</div>
     <div class="card-body">
-      <div class="camera-area">
-        <video id="video-el" autoplay playsinline muted></video>
-        <div class="cam-overlay">
-          <div class="scan-guide">
-            <div class="scan-line"></div>
-            <div class="c3"></div><div class="c4"></div>
-          </div>
+
+      <div id="photo-preview-wrap" style="display:none;margin-bottom:14px;">
+        <img id="photo-preview" style="width:100%;border-radius:10px;border:1px solid var(--border);">
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button class="btn btn-secondary" id="btn-retake" style="flex:1;justify-content:center;">🔄 Νέα φωτογραφία</button>
+          <button class="btn btn-primary" id="btn-analyze" style="flex:2;">🔍 Ανάλυση</button>
         </div>
-        <div class="cam-hint" id="cam-hint">Πατήστε "Κάμερα" για έναρξη</div>
       </div>
 
-      <button class="btn-capture" id="btn-capture" disabled>
-        📸 Λήψη Φωτογραφίας
-      </button>
-
-      <div class="btn-row">
-        <button class="btn btn-secondary" id="btn-cam">▶ Κάμερα</button>
-        <button class="btn btn-secondary" id="btn-upload">🖼 Φόρτωση</button>
+      <div id="photo-btns">
+        <button class="btn-capture" id="btn-take-photo">
+          📸 Φωτογράφισε το SMS
+        </button>
+        <div style="text-align:center;color:var(--text3);font-size:12px;margin:10px 0;">ή</div>
+        <button class="btn btn-secondary" style="width:100%;justify-content:center;" id="btn-gallery">
+          🖼 Επιλογή από Φωτοθήκη
+        </button>
       </div>
 
       <div class="manual-row">
@@ -355,7 +358,8 @@ body {
       </div>
     </div>
   </div>
-  <input type="file" id="file-input" accept="image/*">
+  <input type="file" id="file-input-camera" accept="image/*" capture="environment">
+  <input type="file" id="file-input-gallery" accept="image/*">
 </div>
 
 <!-- ══ SCREEN 2: REVIEW ══ -->
@@ -499,54 +503,41 @@ function setStatus(id, msg, type) {
 }
 function clearStatus(id) { document.getElementById(id).className = 'status-bar'; }
 
-// ── Camera ────────────────────────────────────────────────────────
-const btnCam = document.getElementById('btn-cam');
-btnCam.addEventListener('click', () => {
-  if (videoStream) stopCamera(); else startCamera();
+// ── Photo capture (native iOS camera) ────────────────────────────
+document.getElementById('btn-take-photo').addEventListener('click', () => {
+  document.getElementById('file-input-camera').click();
+});
+document.getElementById('btn-gallery').addEventListener('click', () => {
+  document.getElementById('file-input-gallery').click();
 });
 
-async function startCamera() {
-  try {
-    videoStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: {ideal:1920}, height: {ideal:1080} }
-    });
-    document.getElementById('video-el').srcObject = videoStream;
-    document.getElementById('btn-capture').disabled = false;
-    document.getElementById('cam-hint').textContent = 'Στρέψτε στο SMS — πατήστε 📸';
-    btnCam.textContent = '⏹ Σταμάτημα';
-  } catch(e) {
-    toast('Δεν επιτράπηκε η πρόσβαση στην κάμερα', 'err');
-  }
-}
-
-function stopCamera() {
-  if (videoStream) { videoStream.getTracks().forEach(t => t.stop()); videoStream = null; }
-  document.getElementById('video-el').srcObject = null;
-  document.getElementById('btn-capture').disabled = true;
-  document.getElementById('cam-hint').textContent = 'Πατήστε "Κάμερα" για έναρξη';
-  btnCam.textContent = '▶ Κάμερα';
-}
-
-document.getElementById('btn-capture').addEventListener('click', () => {
-  const video = document.getElementById('video-el');
-  const canvas = document.createElement('canvas');
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  canvas.getContext('2d').drawImage(video, 0, 0);
-  runOCR(canvas.toDataURL('image/jpeg', 0.95));
-});
-
-// ── File upload ───────────────────────────────────────────────────
-document.getElementById('btn-upload').addEventListener('click', () => {
-  document.getElementById('file-input').click();
-});
-document.getElementById('file-input').addEventListener('change', e => {
+function handleFileInput(e) {
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = ev => runOCR(ev.target.result);
+  reader.onload = ev => showPhotoPreview(ev.target.result);
   reader.readAsDataURL(file);
   e.target.value = '';
+}
+
+document.getElementById('file-input-camera').addEventListener('change', handleFileInput);
+document.getElementById('file-input-gallery').addEventListener('change', handleFileInput);
+
+function showPhotoPreview(dataUrl) {
+  document.getElementById('photo-preview').src = dataUrl;
+  document.getElementById('photo-preview-wrap').style.display = 'block';
+  document.getElementById('photo-btns').style.display = 'none';
+  clearStatus('status-scan');
+}
+
+document.getElementById('btn-retake').addEventListener('click', () => {
+  document.getElementById('photo-preview-wrap').style.display = 'none';
+  document.getElementById('photo-btns').style.display = 'block';
+});
+
+document.getElementById('btn-analyze').addEventListener('click', () => {
+  const src = document.getElementById('photo-preview').src;
+  runOCR(src);
 });
 
 // ── OCR (runs in browser via Tesseract.js) ────────────────────────
@@ -555,7 +546,7 @@ async function runOCR(dataUrl) {
   const label = document.getElementById('ocr-label');
   const bar = document.getElementById('ocr-bar');
   prog.classList.add('active');
-  document.getElementById('btn-capture').disabled = true;
+  document.getElementById('btn-analyze').disabled = true;
   clearStatus('status-scan');
 
   try {
@@ -590,16 +581,19 @@ async function runOCR(dataUrl) {
       sortPrescriptions();
       renderRxList();
       toast(`✅ Βρέθηκαν ${found.length} συνταγές`, 'ok');
+      // Reset scan screen for next use
+      document.getElementById('photo-preview-wrap').style.display = 'none';
+      document.getElementById('photo-btns').style.display = 'block';
       showScreen('review');
     } else {
-      setStatus('status-scan', '⚠️ Δεν βρέθηκαν αριθμοί συνταγών. Δοκιμάστε με καλύτερο φωτισμό ή πλησιέστερα.', 'error');
+      setStatus('status-scan', '⚠️ Δεν βρέθηκαν αριθμοί. Φωτογραφίστε πιο κοντά με καλό φωτισμό.', 'error');
     }
   } catch(e) {
     prog.classList.remove('active');
     setStatus('status-scan', '❌ Σφάλμα OCR: ' + e.message, 'error');
   }
 
-  document.getElementById('btn-capture').disabled = !videoStream;
+  document.getElementById('btn-analyze').disabled = false;
 }
 
 // ── Extract prescriptions from OCR text ──────────────────────────
