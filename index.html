@@ -3,9 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Συνταγές">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1a5f3f">
 <title>Συνταγές ΙΔΙΚΑ</title>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <style>
@@ -52,7 +51,7 @@ body {
 .app-header h1 { font-size: 20px; font-weight: 600; color: white; }
 .app-header p  { font-size: 12px; color: rgba(255,255,255,0.7); margin-top: 1px; }
 
-.screen { display: none; padding: 20px; padding-bottom: 90px; }
+.screen { display: none; padding: 14px; padding-bottom: 90px; }
 .screen.active { display: block; }
 
 .card {
@@ -224,8 +223,8 @@ body {
 }
 .nav-item {
   flex: 1; display: flex; flex-direction: column; align-items: center;
-  padding: 10px 0 6px; cursor: pointer;
-  font-size: 10px; color: var(--text3); font-weight: 500;
+  padding: 8px 0 4px; cursor: pointer;
+  font-size: 9px; color: var(--text3); font-weight: 500;
   border: none; background: none; font-family: inherit; transition: color 0.2s;
 }
 .nav-item.active { color: var(--green); }
@@ -315,79 +314,85 @@ body {
   <div class="icon">💊</div>
   <div>
     <h1>Συνταγές ΙΔΙΚΑ</h1>
-    <p>Σάρωση · Barcodes · Εκτύπωση</p>
+    <p>Σάρωση SMS · Εκτύπωση Barcodes</p>
   </div>
 </div>
 
 <!-- ══ SCREEN 1: SCAN ══ -->
 <div class="screen active" id="screen-scan">
-  <div style="height:10px"></div>
+  <div style="height:8px"></div>
 
+  <!-- OCR Progress -->
   <div class="ocr-progress" id="ocr-prog">
     <div class="ocr-label" id="ocr-label">Ανάλυση εικόνας...</div>
     <div class="progress-bar-wrap"><div class="progress-bar" id="ocr-bar"></div></div>
   </div>
 
-  <!-- BEFORE photo: just the two buttons -->
+  <!-- MODE A: Live camera (Android Chrome supports this well) -->
+  <div id="mode-camera" style="display:none;">
+    <div style="position:relative;width:100%;background:#000;border-radius:12px;overflow:hidden;margin-bottom:10px;">
+      <video id="live-video" autoplay playsinline muted style="width:100%;display:block;max-height:55vh;object-fit:cover;"></video>
+      <!-- Targeting overlay -->
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+        <div style="width:85%;height:60%;border:2px solid rgba(255,255,255,0.5);border-radius:8px;position:relative;">
+          <div style="position:absolute;top:-2px;left:-2px;width:20px;height:20px;border-top:3px solid #4ade80;border-left:3px solid #4ade80;border-radius:4px 0 0 0;"></div>
+          <div style="position:absolute;top:-2px;right:-2px;width:20px;height:20px;border-top:3px solid #4ade80;border-right:3px solid #4ade80;border-radius:0 4px 0 0;"></div>
+          <div style="position:absolute;bottom:-2px;left:-2px;width:20px;height:20px;border-bottom:3px solid #4ade80;border-left:3px solid #4ade80;border-radius:0 0 0 4px;"></div>
+          <div style="position:absolute;bottom:-2px;right:-2px;width:20px;height:20px;border-bottom:3px solid #4ade80;border-right:3px solid #4ade80;border-radius:0 0 4px 0;"></div>
+          <div style="position:absolute;bottom:-30px;left:0;right:0;text-align:center;color:rgba(255,255,255,0.8);font-size:11px;">Κεντράρετε το SMS εδώ</div>
+        </div>
+      </div>
+    </div>
+    <button class="btn-capture" id="btn-shoot" style="margin-bottom:8px;">
+      📸 Λήψη
+    </button>
+    <button class="btn btn-secondary" id="btn-stop-cam" style="width:100%;justify-content:center;display:flex;">
+      ✕ Κλείσιμο κάμερας
+    </button>
+  </div>
+
+  <!-- MODE B: Initial buttons (before photo) -->
   <div id="photo-btns">
-
-    <label for="file-input-scan" class="btn-capture" style="display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;">
-      🔍 Σάρωση Εγγράφου (Προτεινόμενο)
+    <button class="btn-capture" id="btn-open-cam">
+      📷 Άνοιγμα Κάμερας
+    </button>
+    <div style="text-align:center;color:var(--text3);font-size:12px;margin:10px 0;">ή φωτογράφηση μέσω εφαρμογής κάμερας</div>
+    <label for="file-input-camera" class="btn btn-secondary" style="width:100%;justify-content:center;display:flex;cursor:pointer;margin-bottom:8px;">
+      📸 Φωτογραφία με Κάμερα
     </label>
-    <div style="font-size:11px;color:var(--text3);text-align:center;margin:4px 0 10px;">Αυτόματη διόρθωση γωνίας & αντανακλάσεων</div>
-
-    <label for="file-input-camera" class="btn btn-secondary" style="width:100%;justify-content:center;display:flex;cursor:pointer;">
-      📸 Απλή Φωτογραφία
-    </label>
-    <div style="text-align:center;color:var(--text3);font-size:12px;margin:8px 0;">ή</div>
     <label for="file-input-gallery" class="btn btn-secondary" style="width:100%;justify-content:center;display:flex;cursor:pointer;">
-      🖼 Από Φωτοθήκη
+      🖼 Από Γκαλερί
     </label>
-
     <div class="manual-row">
       <input type="number" id="manual-code" placeholder="Χειρ. εισαγωγή (16 ψηφία)" maxlength="16">
       <button class="btn btn-secondary" id="btn-manual">+</button>
     </div>
   </div>
 
-  <!-- AFTER photo: side-by-side layout -->
+  <!-- MODE C: After photo taken - preview + results side by side -->
   <div id="photo-preview-wrap" style="display:none;">
-
-    <!-- Action bar on top -->
     <div style="display:flex;gap:8px;margin-bottom:10px;">
       <button class="btn btn-secondary" id="btn-retake" style="flex:1;justify-content:center;">🔄 Νέα</button>
       <button class="btn btn-primary" id="btn-analyze" style="flex:3;">🔍 Ανάλυση</button>
     </div>
-
-    <!-- Side by side: photo + OCR results -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start;">
-
-      <!-- Photo (compact) -->
       <div>
         <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Φωτογραφία</div>
         <img id="photo-preview" style="width:100%;border-radius:8px;border:1px solid var(--border);display:block;">
       </div>
-
-      <!-- OCR results live here -->
       <div>
         <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Αναγνωρίστηκαν</div>
         <div id="ocr-results-panel">
           <div style="color:var(--text3);font-size:13px;padding:10px 0;">Πατήστε Ανάλυση →</div>
         </div>
       </div>
-
     </div>
-
     <div id="status-scan" class="status-bar" style="margin-top:10px;"></div>
-
-    <!-- Proceed button -->
     <button class="btn btn-primary" id="btn-proceed-review" style="margin-top:10px;display:none;">
       ✅ Προχώρηση με αυτές τις συνταγές →
     </button>
-
   </div>
 
-  <input type="file" id="file-input-scan" accept="image/*" capture="environment">
   <input type="file" id="file-input-camera" accept="image/*" capture="environment">
   <input type="file" id="file-input-gallery" accept="image/*">
 </div>
@@ -534,7 +539,48 @@ function setStatus(id, msg, type) {
 function clearStatus(id) { document.getElementById(id).className = 'status-bar'; }
 
 // ── Photo capture (native iOS camera) ────────────────────────────
-// Camera and gallery triggered via <label for="..."> directly - no JS needed
+// ── Live camera (Android Chrome) ─────────────────────────────────
+let liveStream = null;
+
+document.getElementById('btn-open-cam').addEventListener('click', async () => {
+  try {
+    liveStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: 'environment',
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+        focusMode: 'continuous'
+      }
+    });
+    document.getElementById('live-video').srcObject = liveStream;
+    document.getElementById('photo-btns').style.display = 'none';
+    document.getElementById('mode-camera').style.display = 'block';
+  } catch(e) {
+    toast('Δεν επιτράπηκε η πρόσβαση στην κάμερα: ' + e.message, 'err');
+  }
+});
+
+document.getElementById('btn-stop-cam').addEventListener('click', stopLiveCamera);
+
+function stopLiveCamera() {
+  if (liveStream) { liveStream.getTracks().forEach(t => t.stop()); liveStream = null; }
+  document.getElementById('live-video').srcObject = null;
+  document.getElementById('mode-camera').style.display = 'none';
+  document.getElementById('photo-btns').style.display = 'block';
+}
+
+document.getElementById('btn-shoot').addEventListener('click', () => {
+  const video = document.getElementById('live-video');
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+  stopLiveCamera();
+  showPhotoPreview(dataUrl);
+});
+
+// Camera and gallery via file input labels
 
 function handleFileInput(e) {
   const file = e.target.files[0];
@@ -545,7 +591,6 @@ function handleFileInput(e) {
   e.target.value = '';
 }
 
-document.getElementById('file-input-scan').addEventListener('change', handleFileInput);
 document.getElementById('file-input-camera').addEventListener('change', handleFileInput);
 document.getElementById('file-input-gallery').addEventListener('change', handleFileInput);
 
