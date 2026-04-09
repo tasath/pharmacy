@@ -497,7 +497,6 @@ body {
 <script>
 // ── State ─────────────────────────────────────────────────────────
 let prescriptions = [];
-let videoStream = null;
 let history = JSON.parse(localStorage.getItem('rx_history') || '[]');
 
 // ── Navigation ────────────────────────────────────────────────────
@@ -598,12 +597,17 @@ function showPhotoPreview(dataUrl) {
   document.getElementById('photo-preview').src = dataUrl;
   document.getElementById('photo-preview-wrap').style.display = 'block';
   document.getElementById('photo-btns').style.display = 'none';
+  document.getElementById('mode-camera').style.display = 'none';
   clearStatus('status-scan');
+  document.getElementById('ocr-results-panel').innerHTML = '<div style='color:var(--text3);font-size:13px;padding:10px 0;'>Πατήστε Ανάλυση →</div>';
+  document.getElementById('btn-proceed-review').style.display = 'none';
 }
 
 document.getElementById('btn-retake').addEventListener('click', () => {
   document.getElementById('photo-preview-wrap').style.display = 'none';
+  document.getElementById('mode-camera').style.display = 'none';
   document.getElementById('photo-btns').style.display = 'block';
+  if (liveStream) { liveStream.getTracks().forEach(t => t.stop()); liveStream = null; }
 });
 
 document.getElementById('btn-analyze').addEventListener('click', () => {
