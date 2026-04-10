@@ -188,28 +188,18 @@ label.btn { display: inline-flex; }
 
   <!-- Initial buttons -->
   <div id="btns-initial">
-    <button class="btn-big" id="btn-open-cam">📷 Άνοιγμα Κάμερας</button>
-    <label for="inp-camera" class="btn-big" style="background:#2d6a50;">📸 Λήψη Φωτογραφίας</label>
+    <div style="background:var(--green-light);border:1px solid #c5e0d0;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:var(--green);line-height:1.8;">
+      <strong>Πώς να φωτογραφίσετε:</strong><br>
+      📱 Κρατήστε το κινητό <strong>παράλληλα</strong> με την οθόνη<br>
+      💡 Καλός φωτισμός, χωρίς αντανακλάσεις<br>
+      🔍 Πλησιάστε ώστε το κείμενο να είναι <strong>μεγάλο και ευκρινές</strong>
+    </div>
+    <label for="inp-camera" class="btn-big">📸 Φωτογράφισε το SMS</label>
     <label for="inp-gallery" class="btn btn-full" style="width:100%;margin-bottom:8px;">🖼 Από Γκαλερί</label>
     <div class="manual-row">
       <input type="number" id="inp-manual" placeholder="Χειρ. εισαγωγή αριθμού (16 ψηφία)">
       <button class="btn primary" id="btn-add-manual">+</button>
     </div>
-  </div>
-
-  <!-- Live camera -->
-  <div id="div-camera" style="display:none;">
-    <div class="cam-wrap">
-      <video id="live-video" autoplay playsinline muted></video>
-      <div class="cam-guide">
-        <div class="cam-box">
-          <div class="c2"></div><div class="c3"></div>
-        </div>
-      </div>
-      <div class="cam-label">Κεντράρετε το SMS μέσα στο πλαίσιο</div>
-    </div>
-    <button class="btn-big" id="btn-shoot">📸 Λήψη</button>
-    <button class="btn btn-full" id="btn-close-cam">✕ Κλείσιμο</button>
   </div>
 
   <!-- Photo preview + results -->
@@ -309,7 +299,6 @@ label.btn { display: inline-flex; }
 // ── State ──────────────────────────────────────────────────────────
 const state = {
   prescriptions: [],
-  liveStream: null,
   photoData: null,
   history: JSON.parse(localStorage.getItem('ph_hist') || '[]')
 };
@@ -375,22 +364,14 @@ document.getElementById('btn-new-rx').addEventListener('click', () => {
 // ── Scan screen states ─────────────────────────────────────────────
 function showInitial() {
   document.getElementById('btns-initial').style.display = 'block';
-  document.getElementById('div-camera').style.display = 'none';
   document.getElementById('div-preview').style.display = 'none';
   stopCamera();
-}
-
-function showCamera() {
-  document.getElementById('btns-initial').style.display = 'none';
-  document.getElementById('div-camera').style.display = 'block';
-  document.getElementById('div-preview').style.display = 'none';
 }
 
 function showPreview(dataUrl) {
   state.photoData = dataUrl;
   document.getElementById('photo-preview').src = dataUrl;
   document.getElementById('btns-initial').style.display = 'none';
-  document.getElementById('div-camera').style.display = 'none';
   document.getElementById('div-preview').style.display = 'block';
   document.getElementById('ocr-panel').innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px 0;">Πατήστε Ανάλυση</div>';
   document.getElementById('btn-proceed').style.display = 'none';
@@ -402,38 +383,10 @@ function resetScanScreen() {
   showInitial();
 }
 
-// ── Camera ─────────────────────────────────────────────────────────
-document.getElementById('btn-open-cam').addEventListener('click', async () => {
-  try {
-    state.liveStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
-    });
-    document.getElementById('live-video').srcObject = state.liveStream;
-    showCamera();
-  } catch(e) {
-    toast('Σφάλμα κάμερας: ' + e.message, 'err');
-  }
-});
-
-document.getElementById('btn-close-cam').addEventListener('click', showInitial);
+// ── Camera (live camera removed - photo-first workflow is more reliable) ──
 document.getElementById('btn-retake').addEventListener('click', showInitial);
 
-document.getElementById('btn-shoot').addEventListener('click', () => {
-  const video = document.getElementById('live-video');
-  const c = document.createElement('canvas');
-  c.width = video.videoWidth;
-  c.height = video.videoHeight;
-  c.getContext('2d').drawImage(video, 0, 0);
-  showPreview(c.toDataURL('image/jpeg', 0.95));
-});
-
-function stopCamera() {
-  if (state.liveStream) {
-    state.liveStream.getTracks().forEach(t => t.stop());
-    state.liveStream = null;
-  }
-  document.getElementById('live-video').srcObject = null;
-}
+function stopCamera() { /* live camera removed */ }
 
 // ── File inputs ────────────────────────────────────────────────────
 function handleFile(e) {
