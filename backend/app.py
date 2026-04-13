@@ -9,8 +9,8 @@ CORS(app)
 AZURE_KEY      = os.environ.get('AZURE_VISION_KEY', '')
 AZURE_ENDPOINT = os.environ.get('AZURE_ENDPOINT', 'https://pharmacy-vision.cognitiveservices.azure.com/')
 GOOGLE_KEY     = os.environ.get('GOOGLE_VISION_KEY', '')
-GIST_ID        = os.environ.get('GIST_ID', '5b7c43adf7b9574816cb68750e0723ba')
-GITHUB_TOKEN   = os.environ.get('GITHUB_TOKEN', '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')
+GIST_ID        = os.environ.get('GIST_ID', '')
+GITHUB_TOKEN   = os.environ.get('GITHUB_TOKEN', '')
 GIST_FILENAME  = 'pharmacy_data.json'
 
 def make_hash(pwd):
@@ -80,10 +80,38 @@ def clean_b64(b64):
         b64 = b64.split(',')[1]
     return b64.strip()
 
+def resize_image(img_bytes, max_bytes=3_500_000):
+    from PIL import Image
+    import io
+    img = Image.open(io.BytesIO(img_bytes))
+    if img.mode not in ('RGB', 'L'):
+        img = img.convert('RGB')
+    w, h = img.size
+    # Resize if too large
+    max_dim = 3000
+    if w > max_dim or h > max_dim:
+        ratio = min(max_dim/w, max_dim/h)
+        img = img.resize((int(w*ratio), int(h*ratio)), Image.LANCZOS)
+        print(f'Resized to {img.size}')
+    # Compress until small enough
+    quality = 85
+    while quality >= 40:
+        buf = io.BytesIO()
+        img.save(buf, format='JPEG', quality=quality)
+        data = buf.getvalue()
+        if len(data) <= max_bytes:
+            print(f'Compressed to {len(data)} bytes at quality {quality}')
+            return data
+        quality -= 15
+    return data
+
 def ocr_azure(b64):
     b64       = clean_b64(b64)
     img_bytes = base64.b64decode(b64)
-    url       = AZURE_ENDPOINT.rstrip('/') + '/vision/v3.2/ocr'
+    print(f'Image size: {len(img_bytes)} bytes')
+    if len(img_bytes) > 3_500_000:
+        img_bytes = resize_image(img_bytes)
+    url = AZURE_ENDPOINT.rstrip('/') + '/vision/v3.2/ocr'
     res = requests.post(url,
         headers={
             'Ocp-Apim-Subscription-Key': AZURE_KEY,
@@ -92,7 +120,8 @@ def ocr_azure(b64):
         data=img_bytes,
         params={'language': 'el', 'detectOrientation': 'true'})
     print(f'Azure status: {res.status_code}')
-    print(f'Azure response: {res.text[:800]}')
+    if res.status_code != 200:
+        print(f'Azure error: {res.text[:300]}')
     res.raise_for_status()
     resp = res.json()
     print(f'Azure regions: {len(resp.get("regions",[]))}')
@@ -103,6 +132,7 @@ def ocr_azure(b64):
     result = '\n'.join(lines)
     print(f'Azure extracted: {repr(result[:300])}')
     return result
+
 
 def ocr_google(b64):
     b64 = clean_b64(b64)
