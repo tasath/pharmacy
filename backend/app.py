@@ -5,18 +5,33 @@ import os, json, base64, requests, datetime, uuid, hashlib
 app = Flask(__name__)
 CORS(app)
 
-ADMIN_PASSWORD_DEFAULT = 'ac9689e2272427085e35b9d3e3e8bed88cb3434828b43b86fc0596cad4c6e270'  # admin1234
-AZURE_KEY      = os.environ.get('AZURE_VISION_KEY', 'AW6kWq4EcqCgZiXU2vKrDcyFeGOKMcPi7WwtYrlQ7oZ5xvEwXN9gJQQJ99CDAC5RqLJXJ3w3AAAFACOGsQqg')
-AZURE_ENDPOINT = os.environ.get('AZURE_ENDPOINT',   'https://pharmacy-vision.cognitiveservices.azure.com/')
+# ── Config ─────────────────────────────────────────────────────────
+AZURE_KEY      = os.environ.get('AZURE_VISION_KEY', '')
+AZURE_ENDPOINT = os.environ.get('AZURE_ENDPOINT', 'https://pharmacy-vision.cognitiveservices.azure.com/')
 GOOGLE_KEY     = os.environ.get('GOOGLE_VISION_KEY', '')
 DATA_FILE      = os.path.join(os.environ.get('HOME', '.'), 'data', 'pharmacy_data.json')
+
+def make_hash(pwd):
+    return hashlib.sha256(pwd.encode()).hexdigest()
+
+DEFAULT_HASH = make_hash('admin1234')
 
 # ── Data ───────────────────────────────────────────────────────────
 def load_data():
     os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
     if not os.path.exists(DATA_FILE):
-        d = {'pharmacies': {}, 'settings': {'ocr_default': 'azure', 'admin_password': ADMIN_PASSWORD_DEFAULT, 'retention_months': 6}, 'usage': {}, 'lists': {}}
-        save_data(d); return d
+        d = {
+            'pharmacies': {},
+            'settings': {
+                'ocr_default': 'azure',
+                'admin_password': DEFAULT_HASH,
+                'retention_months': 6
+            },
+            'usage': {},
+            'lists': {}
+        }
+        save_data(d)
+        return d
     with open(DATA_FILE, encoding='utf-8') as f:
         return json.load(f)
 
@@ -28,22 +43,36 @@ def save_data(data):
 def get_month():
     return datetime.datetime.now().strftime('%Y-%m')
 
+def check_admin():
+    pwd = request.headers.get('X-Admin-Password', '')
+    data = load_data()
+    stored = data['settings'].get('admin_password', DEFAULT_HASH)
+    return make_hash(pwd) == stored
+
 # ── OCR ────────────────────────────────────────────────────────────
-def ocr_azure(b64):
-    # Strip data URL prefix if present
+def clean_b64(b64):
     if ',' in b64:
         b64 = b64.split(',')[1]
-    b64 = b64.strip()
+    return b64.strip()
+
+def ocr_azure(b64):
+    b64 = clean_b64(b64)
     url = AZURE_ENDPOINT.rstrip('/') + '/vision/v3.2/ocr'
-    # Try JSON first (more reliable)
+    # Try JSON format first
     res = requests.post(url,
-        headers={'Ocp-Apim-Subscription-Key': AZURE_KEY, 'Content-Type': 'application/json'},
+        headers={
+            'Ocp-Apim-Subscription-Key': AZURE_KEY,
+            'Content-Type': 'application/json'
+        },
         json={'base64Image': b64},
         params={'language': 'el', 'detectOrientation': 'true'})
     if res.status_code != 200:
         # Fallback to binary
         res = requests.post(url,
-            headers={'Ocp-Apim-Subscription-Key': AZURE_KEY, 'Content-Type': 'application/octet-stream'},
+            headers={
+                'Ocp-Apim-Subscription-Key': AZURE_KEY,
+                'Content-Type': 'application/octet-stream'
+            },
             data=base64.b64decode(b64),
             params={'language': 'el', 'detectOrientation': 'true'})
     res.raise_for_status()
@@ -54,76 +83,64 @@ def ocr_azure(b64):
     return '\n'.join(lines)
 
 def ocr_google(b64):
-    res = requests.post(f'https://vision.googleapis.com/v1/images:annotate?key={GOOGLE_KEY}',
-        json={'requests': [{'image': {'content': b64}, 'features': [{'type': 'TEXT_DETECTION'}], 'imageContext': {'languageHints': ['el','en']}}]})
+    b64 = clean_b64(b64)
+    res = requests.post(
+        f'https://vision.googleapis.com/v1/images:annotate?key={GOOGLE_KEY}',
+        json={'requests': [{
+            'image': {'content': b64},
+            'features': [{'type': 'TEXT_DETECTION'}],
+            'imageContext': {'languageHints': ['el', 'en']}
+        }]})
     res.raise_for_status()
     return res.json()['responses'][0].get('fullTextAnnotation', {}).get('text', '')
 
 def run_ocr(b64, service):
     if service == 'azure':
-        try: return ocr_azure(b64), 'azure'
-        except:
-            if GOOGLE_KEY: return ocr_google(b64), 'google_fallback'
-            raise
+        try:
+            return ocr_azure(b64), 'azure'
+        except Exception as e:
+            if GOOGLE_KEY:
+                return ocr_google(b64), 'google_fallback'
+            raise e
     elif service == 'google':
-        try: return ocr_google(b64), 'google'
-        except: return ocr_azure(b64), 'azure_fallback'
-    else:
-        try: return ocr_azure(b64), 'azure'
+        try:
+            return ocr_google(b64), 'google'
         except:
-            if GOOGLE_KEY: return ocr_google(b64), 'google_fallback'
+            return ocr_azure(b64), 'azure_fallback'
+    else:  # auto
+        try:
+            return ocr_azure(b64), 'azure'
+        except:
+            if GOOGLE_KEY:
+                return ocr_google(b64), 'google_fallback'
             raise Exception('All OCR services failed')
 
 def log_usage(code, service):
     data = load_data()
     m = get_month()
-    data['usage'].setdefault(m, {}).setdefault(code, {'azure':0,'google':0,'google_fallback':0,'azure_fallback':0,'total':0})
+    if m not in data['usage']:
+        data['usage'][m] = {}
+    if code not in data['usage'][m]:
+        data['usage'][m][code] = {'azure': 0, 'google': 0, 'google_fallback': 0, 'azure_fallback': 0, 'total': 0}
     data['usage'][m][code][service] = data['usage'][m][code].get(service, 0) + 1
     data['usage'][m][code]['total'] += 1
     save_data(data)
 
-# ── Auto-delete expired lists ──────────────────────────────────────
 def cleanup_lists():
     data = load_data()
     now = datetime.datetime.now()
-    to_delete = [lid for lid, lst in data.get('lists', {}).items()
-                 if datetime.datetime.fromisoformat(lst['expires']) < now]
+    to_delete = [
+        lid for lid, lst in data.get('lists', {}).items()
+        if datetime.datetime.fromisoformat(lst['expires']) < now
+    ]
     for lid in to_delete:
         del data['lists'][lid]
     if to_delete:
         save_data(data)
 
-def check_admin():
-    auth = request.headers.get('X-Admin-Password', '')
-    data = load_data()
-    return hashlib.sha256(auth.encode()).hexdigest() == data['settings'].get('admin_password', ADMIN_PASSWORD_DEFAULT)
-
-# ── Routes ─────────────────────────────────────────────────────────
-@app.route('/admin/reset-password')
-def reset_password():
-    # Temporary endpoint - resets admin password to admin1234
-    # DELETE this route after first login
-    data = load_data()
-    import hashlib
-    data['settings']['admin_password'] = hashlib.sha256(b'admin1234').hexdigest()
-    save_data(data)
-    return jsonify({'ok': True, 'message': 'Password reset to admin1234'})
-
-@app.route('/admin/debug-password')
-def debug_password():
-    import hashlib
-    data = load_data()
-    stored = data['settings'].get('admin_password', 'NOT SET')
-    test = hashlib.sha256(b'admin1234').hexdigest()
-    return jsonify({
-        'stored': stored,
-        'expected': test,
-        'match': stored == test
-    })
-
+# ── Public routes ──────────────────────────────────────────────────
 @app.route('/health')
 def health():
-    cleanup_lists()
     return jsonify({'status': 'ok', 'time': datetime.datetime.now().isoformat()})
 
 @app.route('/admin')
@@ -143,7 +160,6 @@ def do_ocr():
         return jsonify({'ok': False, 'error': 'Μη έγκυρος κωδικός πρόσβασης'}), 403
     service = pharmacy.get('ocr_override') or data['settings'].get('ocr_default', 'azure')
     try:
-        if ',' in image: image = image.split(',')[1]
         text, used = run_ocr(image, service)
         log_usage(code, used)
         return jsonify({'ok': True, 'text': text, 'service': used, 'pharmacy': pharmacy.get('name', code)})
@@ -159,7 +175,7 @@ def save_list():
         return jsonify({'ok': False, 'error': 'Invalid code'}), 403
     retention = data['settings'].get('retention_months', 6)
     list_id   = str(uuid.uuid4())[:8].upper()
-    expires   = (datetime.datetime.now() + datetime.timedelta(days=30*retention)).isoformat()
+    expires   = (datetime.datetime.now() + datetime.timedelta(days=30 * retention)).isoformat()
     data.setdefault('lists', {})[list_id] = {
         'pharmacy_code': code,
         'created': datetime.datetime.now().isoformat(),
@@ -190,24 +206,35 @@ def delete_list(list_id):
     code = request.args.get('code', '').strip().upper()
     data = load_data()
     lst  = data.get('lists', {}).get(list_id)
-    if not lst: return jsonify({'ok': False, 'error': 'Not found'}), 404
-    if lst['pharmacy_code'] != code: return jsonify({'ok': False, 'error': 'Unauthorized'}), 403
+    if not lst:
+        return jsonify({'ok': False, 'error': 'Not found'}), 404
+    if lst['pharmacy_code'] != code:
+        return jsonify({'ok': False, 'error': 'Unauthorized'}), 403
     del data['lists'][list_id]
     save_data(data)
     return jsonify({'ok': True})
 
-# ── Admin ──────────────────────────────────────────────────────────
+# ── Admin routes ───────────────────────────────────────────────────
 @app.route('/admin/login', methods=['POST'])
 def admin_login():
     pwd  = request.get_json().get('password', '')
     data = load_data()
-    if hashlib.sha256(pwd.encode()).hexdigest() == data['settings'].get('admin_password', ADMIN_PASSWORD_DEFAULT):
+    stored = data['settings'].get('admin_password', DEFAULT_HASH)
+    if make_hash(pwd) == stored:
         return jsonify({'ok': True})
     return jsonify({'ok': False, 'error': 'Λάθος κωδικός'}), 401
 
+@app.route('/admin/reset')
+def admin_reset():
+    data = load_data()
+    data['settings']['admin_password'] = DEFAULT_HASH
+    save_data(data)
+    return jsonify({'ok': True, 'message': 'Password reset to admin1234'})
+
 @app.route('/admin/data')
 def admin_data():
-    if not check_admin(): return jsonify({'error': 'Unauthorized'}), 401
+    if not check_admin():
+        return jsonify({'error': 'Unauthorized'}), 401
     data     = load_data()
     month    = get_month()
     lists    = data.get('lists', {})
@@ -215,47 +242,65 @@ def admin_data():
     for lst in lists.values():
         c = lst['pharmacy_code']
         list_counts[c] = list_counts.get(c, 0) + 1
-    return jsonify({'pharmacies': data['pharmacies'], 'settings': data['settings'],
-                    'usage': data['usage'].get(month, {}), 'list_counts': list_counts, 'month': month})
+    return jsonify({
+        'pharmacies': data['pharmacies'],
+        'settings': data['settings'],
+        'usage': data['usage'].get(month, {}),
+        'list_counts': list_counts,
+        'month': month
+    })
 
 @app.route('/admin/pharmacy', methods=['POST'])
 def add_pharmacy():
-    if not check_admin(): return jsonify({'error': 'Unauthorized'}), 401
+    if not check_admin():
+        return jsonify({'error': 'Unauthorized'}), 401
     name = request.get_json().get('name', '').strip()
-    if not name: return jsonify({'ok': False, 'error': 'Name required'}), 400
+    if not name:
+        return jsonify({'ok': False, 'error': 'Name required'}), 400
     code = 'FARM-' + str(uuid.uuid4())[:8].upper()
     data = load_data()
-    data['pharmacies'][code] = {'name': name, 'active': True, 'ocr_override': None, 'created': datetime.datetime.now().isoformat()}
+    data['pharmacies'][code] = {
+        'name': name,
+        'active': True,
+        'ocr_override': None,
+        'created': datetime.datetime.now().isoformat()
+    }
     save_data(data)
     return jsonify({'ok': True, 'code': code, 'name': name})
 
 @app.route('/admin/pharmacy/<code>', methods=['PUT'])
 def update_pharmacy(code):
-    if not check_admin(): return jsonify({'error': 'Unauthorized'}), 401
+    if not check_admin():
+        return jsonify({'error': 'Unauthorized'}), 401
     body = request.get_json()
     data = load_data()
-    if code not in data['pharmacies']: return jsonify({'ok': False}), 404
+    if code not in data['pharmacies']:
+        return jsonify({'ok': False, 'error': 'Not found'}), 404
     for f in ['name', 'active', 'ocr_override']:
-        if f in body: data['pharmacies'][code][f] = body[f]
+        if f in body:
+            data['pharmacies'][code][f] = body[f]
     save_data(data)
     return jsonify({'ok': True})
 
 @app.route('/admin/pharmacy/<code>', methods=['DELETE'])
 def delete_pharmacy(code):
-    if not check_admin(): return jsonify({'error': 'Unauthorized'}), 401
+    if not check_admin():
+        return jsonify({'error': 'Unauthorized'}), 401
     data = load_data()
-    if code in data['pharmacies']: del data['pharmacies'][code]
-    save_data(data)
+    if code in data['pharmacies']:
+        del data['pharmacies'][code]
+        save_data(data)
     return jsonify({'ok': True})
 
 @app.route('/admin/settings', methods=['PUT'])
 def update_settings():
-    if not check_admin(): return jsonify({'error': 'Unauthorized'}), 401
+    if not check_admin():
+        return jsonify({'error': 'Unauthorized'}), 401
     body = request.get_json()
     data = load_data()
-    if 'ocr_default'       in body: data['settings']['ocr_default']       = body['ocr_default']
-    if 'retention_months'  in body: data['settings']['retention_months']   = int(body['retention_months'])
-    if 'admin_password'    in body: data['settings']['admin_password']     = hashlib.sha256(body['admin_password'].encode()).hexdigest()
+    if 'ocr_default'      in body: data['settings']['ocr_default']      = body['ocr_default']
+    if 'retention_months' in body: data['settings']['retention_months']  = int(body['retention_months'])
+    if 'admin_password'   in body: data['settings']['admin_password']    = make_hash(body['admin_password'])
     save_data(data)
     return jsonify({'ok': True})
 
