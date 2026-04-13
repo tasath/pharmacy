@@ -30,10 +30,22 @@ def get_month():
 
 # ── OCR ────────────────────────────────────────────────────────────
 def ocr_azure(b64):
+    # Strip data URL prefix if present
+    if ',' in b64:
+        b64 = b64.split(',')[1]
+    b64 = b64.strip()
     url = AZURE_ENDPOINT.rstrip('/') + '/vision/v3.2/ocr'
+    # Try JSON first (more reliable)
     res = requests.post(url,
-        headers={'Ocp-Apim-Subscription-Key': AZURE_KEY, 'Content-Type': 'application/octet-stream'},
-        data=base64.b64decode(b64), params={'language': 'el', 'detectOrientation': 'true'})
+        headers={'Ocp-Apim-Subscription-Key': AZURE_KEY, 'Content-Type': 'application/json'},
+        json={'base64Image': b64},
+        params={'language': 'el', 'detectOrientation': 'true'})
+    if res.status_code != 200:
+        # Fallback to binary
+        res = requests.post(url,
+            headers={'Ocp-Apim-Subscription-Key': AZURE_KEY, 'Content-Type': 'application/octet-stream'},
+            data=base64.b64decode(b64),
+            params={'language': 'el', 'detectOrientation': 'true'})
     res.raise_for_status()
     lines = []
     for region in res.json().get('regions', []):
