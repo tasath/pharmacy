@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Συνταγές ΙΔΙΚΑ</title>
+<style>
+:root{--green:#1a5f3f;--green2:#2d8a5e;--green-light:#e8f5ee;--bg:#f2f2f7;--surface:#fff;--border:#e0e0e5;--text:#1a1a2e;--text2:#6b6b80;--danger:#d0021b;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,sans-serif;background:var(--bg);color:var(--text);}
+.hdr{background:var(--green);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;}
+.hdr h1{color:#fff;font-size:20px;font-weight:600;}
+.hdr p{color:rgba(255,255,255,0.7);font-size:12px;}
+.wrap{max-width:960px;margin:0 auto;padding:24px 16px;}
+.card{background:var(--surface);border-radius:12px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,0.07);overflow:hidden;}
+.card-head{padding:14px 20px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;display:flex;justify-content:space-between;align-items:center;}
+.card-body{padding:20px;}
+.btn{padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:5px;}
+.btn:hover{background:var(--bg);}
+.btn.primary{background:var(--green);color:#fff;border-color:var(--green);}
+.btn.primary:hover{background:var(--green2);}
+.btn.danger{color:var(--danger);border-color:#ffd0d0;background:#fff0f0;}
+.btn.sm{padding:4px 9px;font-size:12px;}
+input,select{padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:#fff;}
+input:focus,select:focus{outline:none;border-color:var(--green);}
+table{width:100%;border-collapse:collapse;}
+th{text-align:left;padding:10px 14px;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.4px;border-bottom:2px solid var(--border);}
+td{padding:12px 14px;border-bottom:1px solid var(--border);font-size:13px;}
+tr:last-child td{border-bottom:none;}
+.code-badge{font-family:monospace;background:var(--green-light);color:var(--green);padding:3px 9px;border-radius:6px;font-size:12px;font-weight:600;}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;}
+.dot-on{background:#22c55e;}.dot-off{background:#ef4444;}
+.toggle-group{display:flex;gap:6px;}
+.tgl{padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:#fff;font-size:12px;cursor:pointer;font-family:inherit;}
+.tgl.active{background:var(--green);color:#fff;border-color:var(--green);}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px;}
+.stat-card{background:var(--green-light);border:1px solid #c5e0d0;border-radius:10px;padding:14px;}
+.stat-card h3{font-size:13px;font-weight:600;color:var(--green);margin-bottom:4px;}
+.stat-card .num{font-size:26px;font-weight:700;color:var(--green);}
+.stat-card p{font-size:11px;color:var(--text2);}
+.alert{padding:10px 14px;border-radius:8px;font-size:13px;margin-top:10px;}
+.alert.ok{background:var(--green-light);color:var(--green);}
+.alert.err{background:#fff0f0;color:var(--danger);}
+.login-wrap{max-width:300px;margin:80px auto;padding:0 16px;}
+.login-wrap h2{text-align:center;margin-bottom:20px;color:var(--green);}
+.login-wrap input{width:100%;margin-bottom:10px;}
+.login-wrap .btn{width:100%;justify-content:center;padding:11px;}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.row label{font-size:13px;font-weight:500;min-width:150px;}
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-wrap">
+    <h2>💊 Admin Panel</h2>
+    <input type="password" id="login-pwd" placeholder="Κωδικός διαχειριστή">
+    <div id="login-err" style="display:none;" class="alert err"></div>
+    <button class="btn primary" id="btn-login">Σύνδεση</button>
+  </div>
+</div>
+
+<div id="admin-main" style="display:none;">
+<div class="hdr">
+  <div><h1>💊 Admin Panel</h1><p>Διαχείριση Συνταγές ΙΔΙΚΑ</p></div>
+  <button class="btn sm" id="btn-logout">Αποσύνδεση</button>
+</div>
+<div class="wrap">
+
+  <!-- Stats -->
+  <div class="stat-grid" id="stat-grid"></div>
+
+  <!-- OCR Settings -->
+  <div class="card">
+    <div class="card-head">
+      <span>🔬 OCR Services</span>
+      <span id="ocr-month" style="font-size:11px;color:var(--text2);font-weight:400;text-transform:none;"></span>
+    </div>
+    <div class="card-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+        <div style="background:var(--green-light);border:1px solid #c5e0d0;border-radius:10px;padding:12px;">
+          <div style="font-size:13px;font-weight:600;color:var(--green);">Azure Computer Vision</div>
+          <div style="font-size:24px;font-weight:700;color:var(--green);margin:4px 0;" id="cnt-azure">-</div>
+          <div style="font-size:11px;color:var(--text2);">από 5,000 δωρεάν/μήνα</div>
+        </div>
+        <div style="background:var(--green-light);border:1px solid #c5e0d0;border-radius:10px;padding:12px;">
+          <div style="font-size:13px;font-weight:600;color:var(--green);">Google Vision</div>
+          <div style="font-size:24px;font-weight:700;color:var(--green);margin:4px 0;" id="cnt-google">-</div>
+          <div style="font-size:11px;color:var(--text2);">από 1,000 δωρεάν/μήνα</div>
+        </div>
+      </div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Προεπιλογή OCR:</div>
+      <div class="toggle-group" id="ocr-toggle">
+        <button class="tgl" data-val="azure">Azure (Κύριο)</button>
+        <button class="tgl" data-val="google">Google</button>
+        <button class="tgl" data-val="auto">Auto-failover</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Retention -->
+  <div class="card">
+    <div class="card-head">🗓 Διατήρηση Δεδομένων</div>
+    <div class="card-body">
+      <div class="row">
+        <label>Διατήρηση λιστών:</label>
+        <select id="sel-retention">
+          <option value="3">3 μήνες</option>
+          <option value="6" selected>6 μήνες</option>
+          <option value="12">12 μήνες</option>
+          <option value="24">24 μήνες</option>
+        </select>
+        <button class="btn primary" id="btn-save-retention">Αποθήκευση</button>
+      </div>
+      <div id="retention-alert"></div>
+    </div>
+  </div>
+
+  <!-- Pharmacies -->
+  <div class="card">
+    <div class="card-head">
+      <span>🏥 Φαρμακεία</span>
+      <button class="btn primary sm" id="btn-add-pharm">+ Νέο</button>
+    </div>
+    <div class="card-body" style="padding:0;">
+      <div id="add-form" style="display:none;padding:16px;border-bottom:1px solid var(--border);background:var(--bg);">
+        <div class="row" style="margin-bottom:10px;">
+          <label>Όνομα Φαρμακείου</label>
+          <input type="text" id="new-name" placeholder="π.χ. Φαρμακείο Παπαδόπουλου" style="flex:1;">
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn primary" id="btn-save-pharm">Δημιουργία</button>
+          <button class="btn" id="btn-cancel-add">Ακύρωση</button>
+        </div>
+        <div id="add-alert"></div>
+      </div>
+      <table>
+        <thead><tr>
+          <th>Φαρμακείο</th><th>Κωδικός</th><th>OCR</th>
+          <th>Σκάνς/μήνα</th><th>Λίστες</th><th>Κατάσταση</th><th></th>
+        </tr></thead>
+        <tbody id="pharm-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Security -->
+  <div class="card">
+    <div class="card-head">🔐 Κωδικός Διαχειριστή</div>
+    <div class="card-body">
+      <div class="row">
+        <label>Νέος κωδικός</label>
+        <input type="password" id="new-pwd" placeholder="Τουλάχιστον 6 χαρακτήρες" style="flex:1;">
+        <button class="btn primary" id="btn-change-pwd">Αλλαγή</button>
+      </div>
+      <div id="pwd-alert"></div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+const SERVER = 'https://pharmacy-backend.azurewebsites.net';
+let pwd = '', adminData = {};
+
+// Login
+document.getElementById('btn-login').addEventListener('click', async () => {
+  const p = document.getElementById('login-pwd').value;
+  try {
+    const res = await fetch(SERVER+'/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:p})});
+    const d = await res.json();
+    if(d.ok){ pwd=p; document.getElementById('login-screen').style.display='none'; document.getElementById('admin-main').style.display='block'; load(); }
+    else { document.getElementById('login-err').textContent=d.error||'Λάθος κωδικός'; document.getElementById('login-err').style.display='block'; }
+  } catch(e){ document.getElementById('login-err').textContent='Σφάλμα: '+e.message; document.getElementById('login-err').style.display='block'; }
+});
+document.getElementById('login-pwd').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('btn-login').click();});
+document.getElementById('btn-logout').addEventListener('click',()=>{pwd='';location.reload();});
+
+async function load() {
+  const res = await fetch(SERVER+'/admin/data',{headers:{'X-Admin-Password':pwd}});
+  adminData = await res.json();
+  render();
+}
+
+function render() {
+  renderStats();
+  renderOCR();
+  renderPharmacies();
+  // Set retention
+  const rm = adminData.settings?.retention_months || 6;
+  document.getElementById('sel-retention').value = rm;
+}
+
+function renderStats() {
+  const pharmacies = Object.keys(adminData.pharmacies||{}).length;
+  const totalScans = Object.values(adminData.usage||{}).reduce((s,u)=>s+(u.total||0),0);
+  const totalLists = Object.values(adminData.list_counts||{}).reduce((s,c)=>s+c,0);
+  document.getElementById('stat-grid').innerHTML = `
+    <div class="stat-card"><h3>Φαρμακεία</h3><div class="num">${pharmacies}</div><p>ενεργά</p></div>
+    <div class="stat-card"><h3>Σκάνς μήνα</h3><div class="num">${totalScans}</div><p>OCR αιτήματα</p></div>
+    <div class="stat-card"><h3>Αποθ. Λίστες</h3><div class="num">${totalLists}</div><p>σύνολο ενεργές</p></div>`;
+}
+
+function renderOCR() {
+  const m = adminData.month||'';
+  document.getElementById('ocr-month').textContent = 'Μήνας: '+m;
+  let azure=0, google=0;
+  Object.values(adminData.usage||{}).forEach(u=>{ azure+=(u.azure||0)+(u.azure_fallback||0); google+=(u.google||0)+(u.google_fallback||0); });
+  document.getElementById('cnt-azure').textContent = azure;
+  document.getElementById('cnt-google').textContent = google;
+  const cur = adminData.settings?.ocr_default||'azure';
+  document.querySelectorAll('#ocr-toggle .tgl').forEach(b=>b.classList.toggle('active',b.dataset.val===cur));
+}
+
+document.querySelectorAll('#ocr-toggle .tgl').forEach(b=>{
+  b.addEventListener('click', async()=>{
+    await fetch(SERVER+'/admin/settings',{method:'PUT',headers:{'Content-Type':'application/json','X-Admin-Password':pwd},body:JSON.stringify({ocr_default:b.dataset.val})});
+    await load();
+  });
+});
+
+function renderPharmacies() {
+  const tbody = document.getElementById('pharm-tbody');
+  const ph = adminData.pharmacies||{};
+  const usage = adminData.usage||{};
+  const lc = adminData.list_counts||{};
+  if(!Object.keys(ph).length){
+    tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text2);">Δεν υπάρχουν φαρμακεία</td></tr>';
+    return;
+  }
+  tbody.innerHTML = Object.entries(ph).map(([code,p])=>`
+    <tr>
+      <td><strong>${p.name}</strong><br><span style="font-size:11px;color:var(--text2);">Από: ${new Date(p.created).toLocaleDateString('el-GR')}</span></td>
+      <td><span class="code-badge">${code}</span></td>
+      <td>
+        <select onchange="setOCR('${code}',this.value)" style="font-size:12px;padding:4px 8px;">
+          <option value="" ${!p.ocr_override?'selected':''}>Προεπιλογή</option>
+          <option value="azure" ${p.ocr_override==='azure'?'selected':''}>Azure</option>
+          <option value="google" ${p.ocr_override==='google'?'selected':''}>Google</option>
+          <option value="auto" ${p.ocr_override==='auto'?'selected':''}>Auto</option>
+        </select>
+      </td>
+      <td>${usage[code]?.total||0}</td>
+      <td>${lc[code]||0}</td>
+      <td><span class="dot ${p.active?'dot-on':'dot-off'}"></span>${p.active?'Ενεργό':'Ανενεργό'}</td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn sm ${p.active?'danger':''}" onclick="toggleActive('${code}',${!p.active})">${p.active?'Απενεργ.':'Ενεργοπ.'}</button>
+        <button class="btn sm danger" onclick="delPharm('${code}','${p.name}')">✕</button>
+      </td>
+    </tr>`).join('');
+}
+
+async function setOCR(code,val){
+  await fetch(SERVER+'/admin/pharmacy/'+code,{method:'PUT',headers:{'Content-Type':'application/json','X-Admin-Password':pwd},body:JSON.stringify({ocr_override:val||null})});
+  await load();
+}
+async function toggleActive(code,active){
+  await fetch(SERVER+'/admin/pharmacy/'+code,{method:'PUT',headers:{'Content-Type':'application/json','X-Admin-Password':pwd},body:JSON.stringify({active})});
+  await load();
+}
+async function delPharm(code,name){
+  if(!confirm('Διαγραφή "'+name+'";')) return;
+  await fetch(SERVER+'/admin/pharmacy/'+code,{method:'DELETE',headers:{'X-Admin-Password':pwd}});
+  await load();
+}
+
+// Add pharmacy
+document.getElementById('btn-add-pharm').addEventListener('click',()=>{ document.getElementById('add-form').style.display='block'; document.getElementById('new-name').focus(); });
+document.getElementById('btn-cancel-add').addEventListener('click',()=>{ document.getElementById('add-form').style.display='none'; });
+document.getElementById('btn-save-pharm').addEventListener('click', async()=>{
+  const name = document.getElementById('new-name').value.trim();
+  if(!name) return;
+  const res = await fetch(SERVER+'/admin/pharmacy',{method:'POST',headers:{'Content-Type':'application/json','X-Admin-Password':pwd},body:JSON.stringify({name})});
+  const d = await res.json();
+  if(d.ok){
+    document.getElementById('add-form').style.display='none';
+    document.getElementById('new-name').value='';
+    document.getElementById('add-alert').innerHTML='<div class="alert ok">✅ Δημιουργήθηκε! Κωδικός: <strong>'+d.code+'</strong></div>';
+    setTimeout(()=>document.getElementById('add-alert').innerHTML='',6000);
+    await load();
+  }
+});
+
+// Retention
+document.getElementById('btn-save-retention').addEventListener('click', async()=>{
+  const val = document.getElementById('sel-retention').value;
+  await fetch(SERVER+'/admin/settings',{method:'PUT',headers:{'Content-Type':'application/json','X-Admin-Password':pwd},body:JSON.stringify({retention_months:parseInt(val)})});
+  document.getElementById('retention-alert').innerHTML='<div class="alert ok">✅ Αποθηκεύτηκε</div>';
+  setTimeout(()=>document.getElementById('retention-alert').innerHTML='',3000);
+  await load();
+});
+
+// Change password
+document.getElementById('btn-change-pwd').addEventListener('click', async()=>{
+  const p = document.getElementById('new-pwd').value;
+  if(p.length<6){ document.getElementById('pwd-alert').innerHTML='<div class="alert err">Τουλάχιστον 6 χαρακτήρες</div>'; return; }
+  await fetch(SERVER+'/admin/settings',{method:'PUT',headers:{'Content-Type':'application/json','X-Admin-Password':pwd},body:JSON.stringify({admin_password:p})});
+  pwd=p; document.getElementById('new-pwd').value='';
+  document.getElementById('pwd-alert').innerHTML='<div class="alert ok">✅ Άλλαξε</div>';
+  setTimeout(()=>document.getElementById('pwd-alert').innerHTML='',3000);
+});
+</script>
+</body>
+</html>
