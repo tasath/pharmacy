@@ -515,7 +515,14 @@ async function runOCR() {
 }
 
 function extractRx(text) {
-  const found=[], norm=text.replace(/[oO]/g,'0').replace(/[lI|]/g,'1').replace(/[sS]/g,'5').replace(/[bB]/g,'8').replace(/[zZ]/g,'2');
+  // Normalize OCR mistakes — including Greek Θ/θ misread as 0
+  const norm = text
+    .replace(/[θΘoO]/g, '0')  // theta + o -> 0
+    .replace(/[lI|]/g, '1')
+    .replace(/[sS]/g, '5')
+    .replace(/[bB]/g, '8')
+    .replace(/[zZ]/g, '2');
+  const found=[];
   const codes=[], dateRx=/(\d{2}\/\d{2}\/\d{4})/g;
   for(const src of [text,norm]){
     let m;
