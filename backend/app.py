@@ -57,30 +57,26 @@ def clean_b64(b64):
 
 def ocr_azure(b64):
     b64 = clean_b64(b64)
+    # Decode base64 to raw bytes
+    img_bytes = base64.b64decode(b64)
     url = AZURE_ENDPOINT.rstrip('/') + '/vision/v3.2/ocr'
-    # Try JSON format first
+    # Send as binary (only supported format for this endpoint)
     res = requests.post(url,
         headers={
             'Ocp-Apim-Subscription-Key': AZURE_KEY,
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/octet-stream'
         },
-        json={'base64Image': b64},
+        data=img_bytes,
         params={'language': 'el', 'detectOrientation': 'true'})
-    if res.status_code != 200:
-        # Fallback to binary
-        res = requests.post(url,
-            headers={
-                'Ocp-Apim-Subscription-Key': AZURE_KEY,
-                'Content-Type': 'application/octet-stream'
-            },
-            data=base64.b64decode(b64),
-            params={'language': 'el', 'detectOrientation': 'true'})
+    print(f'Azure OCR status: {res.status_code}, response: {res.text[:300]}')
     res.raise_for_status()
     lines = []
     for region in res.json().get('regions', []):
         for line in region.get('lines', []):
             lines.append(' '.join(w['text'] for w in line.get('words', [])))
-    return '\n'.join(lines)
+    result = '\n'.join(lines)
+    print(f'Azure OCR extracted text: {repr(result[:300])}')
+    return result
 
 def ocr_google(b64):
     b64 = clean_b64(b64)
