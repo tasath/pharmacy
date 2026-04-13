@@ -9,200 +9,215 @@
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <style>
 :root {
-  --green: #1a5f3f;
-  --green2: #2d8a5e;
-  --green-light: #e8f5ee;
-  --bg: #f2f2f7;
-  --surface: #fff;
-  --border: #e0e0e5;
-  --text: #1a1a2e;
-  --text2: #6b6b80;
-  --text3: #ababbb;
-  --danger: #d0021b;
-  --radius: 12px;
+  --green:#1a5f3f; --green2:#2d8a5e; --green-light:#e8f5ee;
+  --bg:#f2f2f7; --surface:#fff; --border:#e0e0e5;
+  --text:#1a1a2e; --text2:#6b6b80; --text3:#ababbb;
+  --danger:#d0021b; --warning:#e67e22; --radius:12px;
 }
-* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
 
-.header {
-  background: var(--green); padding: 16px 16px 12px;
-  display: flex; align-items: center; gap: 12px;
-}
-.header-icon { width: 38px; height: 38px; background: rgba(255,255,255,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-.header h1 { font-size: 18px; font-weight: 600; color: #fff; }
-.header p { font-size: 11px; color: rgba(255,255,255,0.7); }
+/* Header */
+.hdr{background:var(--green);padding:16px 16px 12px;display:flex;align-items:center;gap:12px;}
+.hdr-icon{width:38px;height:38px;background:rgba(255,255,255,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;}
+.hdr h1{font-size:18px;font-weight:600;color:#fff;}
+.hdr p{font-size:11px;color:rgba(255,255,255,0.7);}
 
 /* Screens */
-.screen { display: none; padding: 14px; padding-bottom: 80px; }
-.screen.active { display: block; }
+.screen{display:none;padding:14px;padding-bottom:80px;}
+.screen.active{display:block;}
 
 /* Cards */
-.card { background: var(--surface); border-radius: var(--radius); margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); overflow: hidden; }
-.card-head { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; }
-.card-body { padding: 16px; }
+.card{background:var(--surface);border-radius:var(--radius);margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,0.06);overflow:hidden;}
+.card-head{padding:12px 16px;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;display:flex;justify-content:space-between;align-items:center;}
+.card-body{padding:16px;}
 
 /* Buttons */
-.btn-big { width: 100%; padding: 16px; background: var(--green); color: #fff; border: none; border-radius: 12px; font-size: 17px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px; font-family: inherit; }
-.btn-big:active { background: var(--green2); }
-.btn-big:disabled { opacity: 0.4; }
-.btn { padding: 11px 16px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 14px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-family: inherit; }
-.btn:active { background: var(--bg); }
-.btn.primary { background: var(--green); color: #fff; border-color: var(--green); }
-.btn.primary:active { background: var(--green2); }
-.btn.danger { color: var(--danger); border-color: #ffd0d0; background: #fff0f0; }
-.btn-row { display: flex; gap: 8px; margin-top: 10px; }
-.btn-row .btn { flex: 1; }
-.btn-full { width: 100%; margin-bottom: 8px; }
-
-/* Camera */
-.cam-wrap { position: relative; width: 100%; background: #000; border-radius: 10px; overflow: hidden; margin-bottom: 10px; }
-#live-video { width: 100%; display: block; max-height: 50vh; object-fit: cover; }
-.cam-guide { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
-.cam-box { width: 85%; height: 60%; border: 2px solid rgba(255,255,255,0.4); border-radius: 8px; position: relative; }
-.cam-box::before, .cam-box::after { content: ''; position: absolute; width: 18px; height: 18px; border-color: #4ade80; border-style: solid; }
-.cam-box::before { top: -2px; left: -2px; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
-.cam-box::after  { bottom: -2px; right: -2px; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
-.cam-box .c2 { position: absolute; top: -2px; right: -2px; width: 18px; height: 18px; border-color: #4ade80; border-style: solid; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
-.cam-box .c3 { position: absolute; bottom: -2px; left: -2px; width: 18px; height: 18px; border-color: #4ade80; border-style: solid; border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
-.cam-label { position: absolute; bottom: 10px; left: 0; right: 0; text-align: center; color: rgba(255,255,255,0.8); font-size: 11px; }
+.btn-big{width:100%;padding:15px;background:var(--green);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px;font-family:inherit;}
+.btn-big:active{background:var(--green2);}
+.btn-big:disabled{opacity:0.4;}
+.btn-big.secondary{background:#2d6a50;}
+.btn-big.outline{background:transparent;border:2px solid var(--green);color:var(--green);}
+.btn-big.outline:active{background:var(--green-light);}
+.btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-family:inherit;}
+.btn:active{background:var(--bg);}
+.btn.primary{background:var(--green);color:#fff;border-color:var(--green);}
+.btn.danger{color:var(--danger);border-color:#ffd0d0;background:#fff0f0;}
+.btn-row{display:flex;gap:8px;margin-top:10px;}
+.btn-row .btn{flex:1;}
 
 /* Progress */
-.progress-wrap { background: var(--green-light); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; display: none; }
-.progress-wrap.show { display: block; }
-.progress-label { font-size: 13px; color: var(--green); font-weight: 500; margin-bottom: 6px; }
-.progress-bar-bg { background: #c5e0d0; border-radius: 20px; height: 5px; overflow: hidden; }
-.progress-bar { height: 100%; background: var(--green); border-radius: 20px; width: 0%; transition: width 0.3s; }
+.prog-wrap{background:var(--green-light);border-radius:10px;padding:12px 14px;margin-bottom:12px;display:none;}
+.prog-wrap.show{display:block;}
+.prog-label{font-size:13px;color:var(--green);font-weight:500;margin-bottom:6px;}
+.prog-bg{background:#c5e0d0;border-radius:20px;height:5px;overflow:hidden;}
+.prog-bar{height:100%;background:var(--green);border-radius:20px;width:0%;transition:width 0.3s;}
 
-/* Patient fields */
-.patient-box { background: var(--green-light); border: 1px solid #c5e0d0; border-radius: 12px; padding: 14px; margin-bottom: 14px; }
-.field-label { font-size: 11px; font-weight: 600; color: var(--green); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-.opt { font-weight: 400; color: var(--text3); text-transform: none; }
-.field-input { width: 100%; padding: 10px 12px; border: 1px solid #c5e0d0; border-radius: 8px; font-size: 15px; font-family: inherit; background: #fff; color: var(--text); margin-bottom: 10px; }
-.field-input:focus { outline: none; border-color: var(--green); }
-.field-input:last-child { margin-bottom: 0; }
+/* Patient/label box */
+.label-box{background:var(--green-light);border:1px solid #c5e0d0;border-radius:12px;padding:14px;margin-bottom:14px;}
+.field-lbl{font-size:11px;font-weight:600;color:var(--green);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;}
+.opt{font-weight:400;color:var(--text3);text-transform:none;}
+.field-inp{width:100%;padding:10px 12px;border:1px solid #c5e0d0;border-radius:8px;font-size:15px;font-family:inherit;background:#fff;color:var(--text);}
+.field-inp:focus{outline:none;border-color:var(--green);}
 
-/* Rx rows */
-.rx-item { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 8px; }
-.rx-code { font-family: monospace; font-size: 14px; font-weight: 600; color: var(--green); }
-.rx-dates { font-size: 12px; color: var(--text2); margin-top: 4px; }
-.rx-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
-.rx-input { font-family: monospace; font-size: 12px; padding: 7px 9px; border: 1px solid var(--border); border-radius: 7px; background: #fff; width: 100%; color: var(--text); }
-.rx-lbl { font-size: 10px; color: var(--text3); text-transform: uppercase; font-weight: 500; margin-bottom: 3px; }
-.rx-num-input { width: 100%; font-family: monospace; font-size: 12px; padding: 7px 9px; border: 1px solid var(--border); border-radius: 7px; background: #fff; color: var(--text); margin-top: 6px; }
-.rm-btn { background: none; border: none; color: var(--text3); font-size: 20px; cursor: pointer; padding: 2px 4px; float: right; }
+/* OCR result summary */
+.rx-summary{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px;}
+.rx-summary-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.rx-summary-item:last-child{border-bottom:none;padding-bottom:0;}
+.rx-num{font-family:monospace;font-weight:600;color:var(--green);font-size:13px;}
+.rx-dates-sm{font-size:11px;color:var(--text2);}
+.status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.dot-active{background:#22c55e;}
+.dot-upcoming{background:var(--warning);}
+.dot-expired{background:var(--danger);}
 
-/* Manual row */
-.manual-row { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
-.manual-row input { flex: 1; padding: 10px 12px; border: 1px solid var(--border); border-radius: 9px; font-size: 13px; font-family: monospace; color: var(--text); background: #fff; }
+/* Output buttons */
+.output-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:4px;}
+.out-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px 8px;background:var(--surface);border:1.5px solid var(--border);border-radius:12px;cursor:pointer;gap:6px;font-family:inherit;}
+.out-btn:active{background:var(--green-light);border-color:var(--green);}
+.out-btn .icon{font-size:24px;}
+.out-btn .lbl{font-size:12px;font-weight:600;color:var(--text2);}
 
-/* Barcode preview */
-.bc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
-.bc-card { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 10px; text-align: center; }
-.bc-card canvas { max-width: 100%; }
-.bc-num { font-family: monospace; font-size: 10px; font-weight: 600; margin-top: 4px; }
-.bc-dates { font-size: 10px; color: var(--text2); margin-top: 2px; line-height: 1.5; }
-.bc-idx { font-size: 9px; color: var(--text3); margin-bottom: 3px; }
+/* Rx edit list */
+.rx-item{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;}
+.rx-code{font-family:monospace;font-size:14px;font-weight:600;color:var(--green);}
+.rx-inputs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;}
+.rx-input{font-family:monospace;font-size:12px;padding:7px 9px;border:1px solid var(--border);border-radius:7px;background:#fff;width:100%;color:var(--text);}
+.rx-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:500;margin-bottom:3px;}
+.rx-num-input{width:100%;font-family:monospace;font-size:12px;padding:7px 9px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--text);margin-top:6px;}
+.rm-btn{background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;padding:2px 4px;float:right;}
+.manual-row{display:flex;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
+.manual-row input{flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:9px;font-size:13px;font-family:monospace;color:var(--text);background:#fff;}
+.badge{background:var(--green-light);color:var(--green);border-radius:20px;padding:2px 9px;font-size:11px;font-weight:600;}
 
-/* OCR side panel */
-.scan-split { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-.split-label { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-.ocr-result-item { background: var(--green-light); border: 1px solid #c5e0d0; border-radius: 8px; padding: 8px; margin-bottom: 6px; }
-.ocr-result-code { font-family: monospace; font-size: 11px; font-weight: 600; color: var(--green); word-break: break-all; }
-.ocr-result-date { font-size: 10px; color: var(--text2); margin-top: 2px; }
+/* Saved lists */
+.list-item{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer;}
+.list-item:last-child{border-bottom:none;}
+.list-item:active{background:var(--bg);}
+.list-id{font-family:monospace;font-size:12px;color:var(--text3);margin-bottom:2px;}
+.list-label{font-size:15px;font-weight:600;color:var(--text);}
+.list-meta{font-size:11px;color:var(--text2);margin-top:2px;}
+.list-badges{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;}
+.list-badge{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600;}
+.lb-active{background:#dcfce7;color:#166534;}
+.lb-upcoming{background:#fef3c7;color:#92400e;}
+.lb-expired{background:#fee2e2;color:#991b1b;}
 
-/* Status */
-.status { padding: 10px 14px; border-radius: 9px; font-size: 13px; margin-bottom: 10px; display: none; }
-.status.info { background: #e8f0fe; color: #1a56c4; display: block; }
-.status.ok   { background: var(--green-light); color: var(--green); display: block; }
-.status.err  { background: #fff0f0; color: var(--danger); display: block; }
+/* Screen barcode display */
+.bc-screen-item{background:var(--surface);border-radius:12px;padding:16px;margin-bottom:12px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+.bc-screen-num{font-family:monospace;font-size:13px;font-weight:700;margin-top:8px;color:var(--text);}
+.bc-screen-dates{font-size:12px;color:var(--text2);margin-top:4px;}
+.bc-screen-status{font-size:11px;font-weight:600;margin-top:4px;}
+.bc-screen-item canvas{max-width:100%;}
 
-/* History */
-.hist-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); }
-.hist-row:last-child { border-bottom: none; }
-.hist-ts { font-size: 11px; color: var(--text3); }
-.badge { background: var(--green-light); color: var(--green); border-radius: 20px; padding: 2px 9px; font-size: 11px; font-weight: 600; }
+/* Status bar */
+.status{padding:10px 14px;border-radius:9px;font-size:13px;margin-bottom:10px;display:none;}
+.status.info{background:#e8f0fe;color:#1a56c4;display:block;}
+.status.ok{background:var(--green-light);color:var(--green);display:block;}
+.status.err{background:#fff0f0;color:var(--danger);display:block;}
 
-/* Bottom nav */
-.nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); border-top: 1px solid var(--border); display: flex; }
-.nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 8px 0 6px; font-size: 9px; color: var(--text3); font-weight: 500; border: none; background: none; font-family: inherit; cursor: pointer; }
-.nav-btn.active { color: var(--green); }
-.nav-icon { font-size: 20px; margin-bottom: 2px; }
+/* Scan split */
+.scan-split{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+.split-lbl{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;}
+.ocr-item{background:var(--green-light);border:1px solid #c5e0d0;border-radius:8px;padding:8px;margin-bottom:6px;}
+.ocr-item-code{font-family:monospace;font-size:11px;font-weight:600;color:var(--green);word-break:break-all;}
+.ocr-item-date{font-size:10px;color:var(--text2);margin-top:2px;}
+
+/* Nav */
+.nav{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,0.95);backdrop-filter:blur(8px);border-top:1px solid var(--border);display:flex;}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 0 6px;font-size:9px;color:var(--text3);font-weight:500;border:none;background:none;font-family:inherit;cursor:pointer;}
+.nav-btn.active{color:var(--green);}
+.nav-icon{font-size:20px;margin-bottom:2px;}
 
 /* Empty */
-.empty { text-align: center; padding: 30px 16px; color: var(--text3); }
-.empty-icon { font-size: 36px; margin-bottom: 8px; }
+.empty{text-align:center;padding:30px 16px;color:var(--text3);}
+.empty-icon{font-size:36px;margin-bottom:8px;}
 
 /* Toast */
-.toast { position: fixed; bottom: 74px; left: 14px; right: 14px; background: #1a1a2e; color: #fff; padding: 12px 16px; border-radius: 10px; font-size: 14px; text-align: center; transform: translateY(20px); opacity: 0; transition: all 0.3s; z-index: 999; }
-.toast.show { transform: translateY(0); opacity: 1; }
-.toast.ok  { background: var(--green); }
-.toast.err { background: var(--danger); }
+.toast{position:fixed;bottom:74px;left:14px;right:14px;background:#1a1a2e;color:#fff;padding:12px 16px;border-radius:10px;font-size:14px;text-align:center;transform:translateY(20px);opacity:0;transition:all 0.3s;z-index:999;}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.ok{background:var(--green);}
+.toast.err{background:var(--danger);}
+
+/* Setup */
+.setup-wrap{max-width:340px;margin:60px auto;padding:0 20px;}
+.setup-logo{text-align:center;font-size:52px;margin-bottom:14px;}
+.setup-title{text-align:center;font-size:22px;font-weight:700;color:var(--green);margin-bottom:6px;}
+.setup-sub{text-align:center;font-size:14px;color:var(--text2);margin-bottom:28px;line-height:1.6;}
+.setup-inp{width:100%;padding:14px 16px;border:2px solid var(--border);border-radius:12px;font-size:18px;font-family:monospace;text-align:center;letter-spacing:2px;color:var(--text);background:#fff;margin-bottom:12px;text-transform:uppercase;}
+.setup-inp:focus{outline:none;border-color:var(--green);}
 
 /* Print */
-#print-zone { display: none; }
-@media print {
-  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-  html, body { height: auto !important; overflow: visible !important; margin: 0 !important; padding: 0 !important; }
-  body > *:not(#print-zone) { display: none !important; }
-  #print-zone {
-    display: block !important;
-    position: absolute !important;
-    top: 0; left: 0; width: 100%;
-    font-family: Arial, sans-serif;
-    padding: 10px;
-  }
-  .pz-header { display: flex; justify-content: space-between; border-bottom: 2px solid #1a5f3f; padding-bottom: 8px; margin-bottom: 10px; }
-  .pz-title { font-size: 14px; font-weight: 700; color: #1a5f3f; }
-  .pz-meta { font-size: 10px; color: #444; text-align: right; line-height: 1.6; }
-  .pz-patient { background: #f0f7f3; padding: 6px 10px; font-size: 11px; margin-bottom: 10px; display: flex; gap: 20px; }
-  .pz-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .pz-card { border: 1px solid #ccc; padding: 8px; text-align: center; break-inside: avoid; }
-  .pz-card canvas { max-width: 100%; height: auto; display: block; margin: 0 auto; }
-  .pz-idx  { font-size: 9px; color: #888; margin-bottom: 3px; }
-  .pz-code { font-family: 'Courier New', monospace; font-size: 10px; font-weight: 700; margin-top: 4px; }
-  .pz-dates { font-size: 10px; color: #444; margin-top: 2px; line-height: 1.5; }
+#print-zone{display:none;}
+@media print{
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+  html,body{height:auto!important;overflow:visible!important;margin:0!important;padding:0!important;}
+  body>*:not(#print-zone){display:none!important;}
+  #print-zone{display:block!important;position:absolute!important;top:0;left:0;width:100%;font-family:Arial,sans-serif;padding:10px;}
+  .pz-hdr{display:flex;justify-content:space-between;border-bottom:2px solid #1a5f3f;padding-bottom:8px;margin-bottom:10px;}
+  .pz-title{font-size:14px;font-weight:700;color:#1a5f3f;}
+  .pz-meta{font-size:10px;color:#444;text-align:right;line-height:1.6;}
+  .pz-label{background:#f0f7f3;padding:6px 10px;font-size:11px;margin-bottom:10px;}
+  .pz-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .pz-card{border:1px solid #ccc;padding:8px;text-align:center;break-inside:avoid;}
+  .pz-card canvas{max-width:100%;height:auto;display:block;margin:0 auto;}
+  .pz-idx{font-size:9px;color:#888;margin-bottom:3px;}
+  .pz-code{font-family:'Courier New',monospace;font-size:10px;font-weight:700;margin-top:4px;}
+  .pz-dates{font-size:10px;color:#444;margin-top:2px;line-height:1.5;}
 }
-
-input[type=file] { display: none; }
-label.btn-big { display: flex; }
-label.btn { display: inline-flex; }
+input[type=file]{display:none;}
+label.btn-big{display:flex;}
 </style>
 </head>
 <body>
 
-<div class="header">
-  <div class="header-icon">💊</div>
-  <div>
-    <h1>Συνταγές ΙΔΙΚΑ</h1>
-    <p>Σάρωση · Barcodes · Εκτύπωση</p>
+<!-- SETUP -->
+<div id="setup-screen" style="display:none;">
+  <div class="setup-wrap">
+    <div class="setup-logo">💊</div>
+    <div class="setup-title">Συνταγές ΙΔΙΚΑ</div>
+    <div class="setup-sub">Εισάγετε τον κωδικό πρόσβασης<br>που σας δόθηκε</div>
+    <input type="text" class="setup-inp" id="setup-code" placeholder="FARM-XXXXXXXX" maxlength="20">
+    <div class="status" id="setup-status"></div>
+    <button class="btn-big" id="btn-setup">Σύνδεση →</button>
   </div>
 </div>
 
-<!-- ═══ SCREEN: SCAN ═══ -->
-<div class="screen active" id="screen-scan">
+<!-- MAIN APP -->
+<div id="main-app" style="display:none;">
 
-  <div class="progress-wrap" id="prog-wrap">
-    <div class="progress-label" id="prog-label">Ανάλυση...</div>
-    <div class="progress-bar-bg"><div class="progress-bar" id="prog-bar"></div></div>
+<div class="hdr">
+  <div class="hdr-icon">💊</div>
+  <div>
+    <h1>Συνταγές ΙΔΙΚΑ</h1>
+    <p id="hdr-pharmacy">Φόρτωση...</p>
+  </div>
+</div>
+
+<!-- ═══ SCAN ═══ -->
+<div class="screen active" id="screen-scan">
+  <div class="prog-wrap" id="prog-wrap">
+    <div class="prog-label" id="prog-label">Ανάλυση...</div>
+    <div class="prog-bg"><div class="prog-bar" id="prog-bar"></div></div>
   </div>
 
-  <!-- Initial buttons -->
-  <div id="btns-initial">
+  <!-- Initial -->
+  <div id="div-initial">
     <div style="background:var(--green-light);border:1px solid #c5e0d0;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:var(--green);line-height:1.8;">
       <strong>Πώς να φωτογραφίσετε:</strong><br>
       📱 Κρατήστε το κινητό <strong>παράλληλα</strong> με την οθόνη<br>
       💡 Καλός φωτισμός, χωρίς αντανακλάσεις<br>
-      🔍 Πλησιάστε ώστε το κείμενο να είναι <strong>μεγάλο και ευκρινές</strong>
+      🔍 Πλησιάστε ώστε το κείμενο να είναι <strong>μεγάλο</strong>
     </div>
     <label for="inp-camera" class="btn-big">📸 Φωτογράφισε το SMS</label>
-    <label for="inp-gallery" class="btn btn-full" style="width:100%;margin-bottom:8px;">🖼 Από Γκαλερί</label>
+    <label for="inp-gallery" class="btn-big secondary">🖼 Από Γκαλερί</label>
     <div class="manual-row">
-      <input type="number" id="inp-manual" placeholder="Χειρ. εισαγωγή αριθμού (16 ψηφία)">
+      <input type="number" id="inp-manual" placeholder="Χειρ. εισαγωγή (16 ψηφία)">
       <button class="btn primary" id="btn-add-manual">+</button>
     </div>
   </div>
 
-  <!-- Photo preview + results -->
+  <!-- Preview + OCR results -->
   <div id="div-preview" style="display:none;">
     <div class="btn-row" style="margin-bottom:10px;">
       <button class="btn" id="btn-retake">🔄 Νέα</button>
@@ -210,481 +225,461 @@ label.btn { display: inline-flex; }
     </div>
     <div class="scan-split">
       <div>
-        <div class="split-label">Φωτογραφία</div>
+        <div class="split-lbl">Φωτογραφία</div>
         <img id="photo-preview" style="width:100%;border-radius:8px;border:1px solid var(--border);">
       </div>
       <div>
-        <div class="split-label">Αναγνωρίστηκαν</div>
+        <div class="split-lbl">Αναγνωρίστηκαν</div>
         <div id="ocr-panel"><div style="color:var(--text3);font-size:12px;padding:8px 0;">Πατήστε Ανάλυση</div></div>
       </div>
     </div>
     <div class="status" id="status-scan"></div>
-    <button class="btn-big" id="btn-proceed" style="display:none;margin-top:8px;">✅ Προχώρηση →</button>
+    <div id="div-confirm" style="display:none;">
+      <div class="label-box">
+        <div class="field-lbl">Ετικέτα <span class="opt">(προαιρετικό)</span></div>
+        <input type="text" class="field-inp" id="inp-label" placeholder="π.χ. Γιώργης Π., Ασθενής #5...">
+      </div>
+      <div class="output-btns">
+        <button class="out-btn" id="btn-out-print">
+          <div class="icon">🖨</div>
+          <div class="lbl">Εκτύπωση</div>
+        </button>
+        <button class="out-btn" id="btn-out-screen">
+          <div class="icon">📱</div>
+          <div class="lbl">Οθόνη</div>
+        </button>
+        <button class="out-btn" id="btn-out-email">
+          <div class="icon">📧</div>
+          <div class="lbl">Email</div>
+        </button>
+      </div>
+    </div>
   </div>
 
   <input type="file" id="inp-camera" accept="image/*" capture="environment">
   <input type="file" id="inp-gallery" accept="image/*">
 </div>
 
-<!-- ═══ SCREEN: REVIEW ═══ -->
-<div class="screen" id="screen-review">
-  <div class="patient-box">
-    <div class="field-label">Ασθενής <span class="opt">(προαιρετικό)</span></div>
-    <input type="text" class="field-input" id="inp-name" placeholder="Ονοματεπώνυμο">
-    <div class="field-label">ΑΜΚΑ <span class="opt">(προαιρετικό)</span></div>
-    <input type="text" class="field-input" id="inp-amka" placeholder="ΑΜΚΑ" maxlength="11">
-  </div>
+<!-- ═══ LISTS ═══ -->
+<div class="screen" id="screen-lists">
   <div class="card">
     <div class="card-head">
-      <span>Συνταγές</span>
-      <span class="badge" id="rx-count">0</span>
+      <span>Αποθηκευμένες Λίστες</span>
+      <button class="btn" id="btn-refresh-lists" style="padding:4px 8px;font-size:11px;">↻ Ανανέωση</button>
     </div>
-    <div class="card-body">
-      <div id="rx-list"><div class="empty"><div class="empty-icon">📋</div><p>Καμία συνταγή ακόμα</p></div></div>
-      <div class="manual-row">
-        <input type="number" id="inp-manual2" placeholder="Προσθήκη αριθμού">
-        <button class="btn primary" id="btn-add-manual2">+</button>
-      </div>
+    <div id="lists-container">
+      <div class="empty"><div class="empty-icon">📋</div><p>Φόρτωση...</p></div>
     </div>
-  </div>
-  <button class="btn-big" id="btn-go-print" disabled>Προεπισκόπηση & Εκτύπωση →</button>
-  <div class="btn-row">
-    <button class="btn btn-full" id="btn-back-scan">← Νέα Σάρωση</button>
   </div>
 </div>
 
-<!-- ═══ SCREEN: PRINT ═══ -->
-<div class="screen" id="screen-print">
-  <div class="status" id="status-print"></div>
+<!-- ═══ SCREEN BARCODES ═══ -->
+<div class="screen" id="screen-barcodes">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+    <button class="btn" id="btn-back-to-lists">← Πίσω</button>
+    <div style="font-size:13px;font-weight:600;color:var(--text2);" id="bc-screen-title">Λίστα</div>
+    <button class="btn" id="btn-bc-print">🖨</button>
+  </div>
+  <div id="bc-screen-container"></div>
+</div>
+
+<!-- ═══ SETTINGS ═══ -->
+<div class="screen" id="screen-settings">
   <div class="card">
-    <div class="card-head">Προεπισκόπηση</div>
+    <div class="card-head">⚙️ Ρυθμίσεις</div>
     <div class="card-body">
-      <div class="bc-grid" id="bc-preview"></div>
+      <div style="font-size:14px;margin-bottom:8px;"><strong>Φαρμακείο:</strong> <span id="settings-pharmacy-name"></span></div>
+      <div style="font-size:14px;margin-bottom:16px;color:var(--text2);font-family:monospace;" id="settings-code"></div>
+      <button class="btn danger btn-full" id="btn-logout" style="width:100%;justify-content:center;">Αλλαγή Φαρμακείου</button>
     </div>
-  </div>
-  <button class="btn-big" id="btn-print">🖨 Εκτύπωση</button>
-  <div class="btn-row">
-    <button class="btn" id="btn-back-review">← Πίσω</button>
-    <button class="btn" id="btn-new-rx">🔄 Νέα</button>
   </div>
 </div>
 
-<!-- ═══ SCREEN: HISTORY ═══ -->
-<div class="screen" id="screen-history">
-  <div class="card">
-    <div class="card-head">
-      <span>Ιστορικό</span>
-      <button class="btn" id="btn-clear-hist" style="padding:4px 8px;font-size:11px;">Καθαρισμός</button>
-    </div>
-    <div id="hist-list"><div class="empty"><div class="empty-icon">📜</div><p>Δεν υπάρχουν εκτυπώσεις</p></div></div>
-  </div>
-</div>
-
-<!-- Bottom nav -->
 <div class="nav">
   <button class="nav-btn active" data-s="scan"><div class="nav-icon">📷</div>Σάρωση</button>
-  <button class="nav-btn" data-s="review"><div class="nav-icon">✅</div>Έλεγχος</button>
-  <button class="nav-btn" data-s="print"><div class="nav-icon">🖨</div>Εκτύπωση</button>
-  <button class="nav-btn" data-s="history"><div class="nav-icon">📜</div>Ιστορικό</button>
+  <button class="nav-btn" data-s="lists"><div class="nav-icon">📋</div>Λίστες</button>
+  <button class="nav-btn" data-s="settings"><div class="nav-icon">⚙️</div>Ρυθμίσεις</button>
 </div>
 
-<!-- Print zone -->
-<div id="print-zone"></div>
+</div><!-- /main-app -->
 
+<div id="print-zone"></div>
 <div class="toast" id="toast"></div>
 
 <script>
 'use strict';
+const SERVER = 'https://pharmacy-backend-ay17.onrender.com'; // Update after deploy
 
 // ── State ──────────────────────────────────────────────────────────
-const state = {
-  prescriptions: [],
-  photoData: null,
-  history: JSON.parse(localStorage.getItem('ph_hist') || '[]')
+const S = {
+  code:        localStorage.getItem('ph_code') || '',
+  name:        localStorage.getItem('ph_name') || '',
+  photoData:   null,
+  foundRx:     [],
+  // Local labels: list_id → label text
+  labels:      JSON.parse(localStorage.getItem('ph_labels') || '{}')
 };
 
-const VISION_KEY = 'AIzaSyA1bD5akYimOEtE9SMvVi6vqTPJgkb1yw4';
+function saveLabels() { localStorage.setItem('ph_labels', JSON.stringify(S.labels)); }
+
+// ── Init ───────────────────────────────────────────────────────────
+function init() {
+  if (S.code) showApp();
+  else document.getElementById('setup-screen').style.display = 'block';
+}
+
+function showApp() {
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'block';
+  document.getElementById('hdr-pharmacy').textContent = S.name || S.code;
+  document.getElementById('settings-pharmacy-name').textContent = S.name || S.code;
+  document.getElementById('settings-code').textContent = S.code;
+}
+
+// ── Setup ──────────────────────────────────────────────────────────
+document.getElementById('btn-setup').addEventListener('click', async () => {
+  const code = document.getElementById('setup-code').value.trim().toUpperCase();
+  if (!code) { setStatus('setup-status','Εισάγετε κωδικό','err'); return; }
+  setStatus('setup-status','Επαλήθευση...','info');
+  document.getElementById('btn-setup').disabled = true;
+  try {
+    const res  = await fetch(SERVER+'/api/ocr', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({code, image:'dGVzdA=='})});
+    const data = await res.json();
+    if (data.ok || (data.error && !data.error.includes('έγκυρος'))) {
+      S.code = code; S.name = data.pharmacy || code;
+      localStorage.setItem('ph_code', S.code);
+      localStorage.setItem('ph_name', S.name);
+      showApp();
+    } else {
+      setStatus('setup-status', data.error || 'Μη έγκυρος κωδικός', 'err');
+    }
+  } catch(e) { setStatus('setup-status','Σφάλμα σύνδεσης: '+e.message,'err'); }
+  document.getElementById('btn-setup').disabled = false;
+});
+document.getElementById('setup-code').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('btn-setup').click(); });
+
+document.getElementById('btn-logout').addEventListener('click', () => {
+  if (confirm('Αλλαγή φαρμακείου; Ο κωδικός θα διαγραφεί.')) {
+    localStorage.removeItem('ph_code'); localStorage.removeItem('ph_name'); location.reload();
+  }
+});
 
 // ── Utils ──────────────────────────────────────────────────────────
 function toast(msg, type) {
   const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = 'toast show ' + (type || '');
-  setTimeout(() => el.className = 'toast', 3000);
+  el.textContent = msg; el.className = 'toast show '+(type||'');
+  setTimeout(() => el.className='toast', 3000);
 }
-
 function setStatus(id, msg, type) {
   const el = document.getElementById(id);
-  el.textContent = msg;
-  el.className = 'status ' + type;
+  el.textContent = msg; el.className = 'status '+type;
 }
-
 function parseDate(s) {
-  if (!s) return null;
+  if(!s) return null;
   const p = s.split('/');
-  return p.length === 3 ? new Date(+p[2], +p[1]-1, +p[0]) : null;
+  return p.length===3 ? new Date(+p[2],+p[1]-1,+p[0]) : null;
 }
-
-function sortRx() {
-  state.prescriptions.sort((a, b) => {
-    const da = parseDate(a.ekdosi), db = parseDate(b.ekdosi);
-    if (!da && !db) return 0;
-    if (!da) return 1;
-    if (!db) return -1;
-    return da - db;
-  });
+function rxStatus(ekdosi, lixis) {
+  const now = new Date();
+  const e = parseDate(ekdosi), l = parseDate(lixis);
+  if (l && l < now) return 'expired';
+  if (e && e > now) return 'upcoming';
+  return 'active';
+}
+function statusLabel(s) {
+  return s==='active' ? '✅ Ενεργή' : s==='upcoming' ? '⏳ Προσεχής' : '❌ Ληγμένη';
+}
+function statusClass(s) {
+  return s==='active' ? 'dot-active' : s==='upcoming' ? 'dot-upcoming' : 'dot-expired';
 }
 
 // ── Navigation ─────────────────────────────────────────────────────
 function goTo(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('screen-' + name).classList.add('active');
-  document.querySelector('[data-s="' + name + '"]').classList.add('active');
-  if (name === 'print') buildPreview();
-  if (name === 'history') renderHistory();
+  document.getElementById('screen-'+name).classList.add('active');
+  const nb = document.querySelector('[data-s="'+name+'"]');
+  if (nb) nb.classList.add('active');
+  if (name==='lists') loadLists();
+  if (name==='settings') {}
 }
+document.querySelectorAll('.nav-btn').forEach(b => b.addEventListener('click', () => goTo(b.dataset.s)));
 
-document.querySelectorAll('.nav-btn').forEach(b => {
-  b.addEventListener('click', () => goTo(b.dataset.s));
-});
-
-document.getElementById('btn-back-scan').addEventListener('click', () => goTo('scan'));
-document.getElementById('btn-back-review').addEventListener('click', () => goTo('review'));
-document.getElementById('btn-go-print').addEventListener('click', () => goTo('print'));
-document.getElementById('btn-new-rx').addEventListener('click', () => {
-  state.prescriptions = [];
-  document.getElementById('inp-name').value = '';
-  document.getElementById('inp-amka').value = '';
-  renderRxList();
-  resetScanScreen();
-  goTo('scan');
-});
-
-// ── Scan screen states ─────────────────────────────────────────────
+// ── Scan screen ────────────────────────────────────────────────────
 function showInitial() {
-  document.getElementById('btns-initial').style.display = 'block';
+  document.getElementById('div-initial').style.display = 'block';
   document.getElementById('div-preview').style.display = 'none';
-  stopCamera();
+  document.getElementById('div-confirm').style.display = 'none';
+  document.getElementById('inp-label').value = '';
+  S.foundRx = [];
 }
 
 function showPreview(dataUrl) {
-  state.photoData = dataUrl;
+  S.photoData = dataUrl;
   document.getElementById('photo-preview').src = dataUrl;
-  document.getElementById('btns-initial').style.display = 'none';
+  document.getElementById('div-initial').style.display = 'none';
   document.getElementById('div-preview').style.display = 'block';
+  document.getElementById('div-confirm').style.display = 'none';
   document.getElementById('ocr-panel').innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px 0;">Πατήστε Ανάλυση</div>';
-  document.getElementById('btn-proceed').style.display = 'none';
   document.getElementById('status-scan').className = 'status';
-  stopCamera();
 }
 
-function resetScanScreen() {
-  showInitial();
-}
-
-// ── Camera (live camera removed - photo-first workflow is more reliable) ──
-document.getElementById('btn-retake').addEventListener('click', showInitial);
-
-function stopCamera() { /* live camera removed */ }
-
-// ── File inputs ────────────────────────────────────────────────────
 function handleFile(e) {
-  const f = e.target.files[0];
-  if (!f) return;
+  const f = e.target.files[0]; if(!f) return;
   const r = new FileReader();
   r.onload = ev => showPreview(ev.target.result);
-  r.readAsDataURL(f);
-  e.target.value = '';
+  r.readAsDataURL(f); e.target.value='';
 }
-
 document.getElementById('inp-camera').addEventListener('change', handleFile);
 document.getElementById('inp-gallery').addEventListener('change', handleFile);
+document.getElementById('btn-retake').addEventListener('click', showInitial);
 
-// ── OCR via Google Vision ──────────────────────────────────────────
+// Manual add
+document.getElementById('btn-add-manual').addEventListener('click', () => {
+  const val = document.getElementById('inp-manual').value.trim();
+  if(!/^\d{10,16}$/.test(val)){toast('Εισάγετε 10-16 ψηφία','err');return;}
+  if(S.foundRx.find(p=>p.number===val)){toast('Υπάρχει ήδη','err');return;}
+  S.foundRx.push({number:val,ekdosi:'',lixis:''});
+  document.getElementById('inp-manual').value='';
+  showConfirm(S.foundRx);
+  goTo('scan');
+});
+document.getElementById('inp-manual').addEventListener('keydown', e=>{if(e.key==='Enter') document.getElementById('btn-add-manual').click();});
+
+// ── OCR ────────────────────────────────────────────────────────────
 document.getElementById('btn-analyze').addEventListener('click', runOCR);
 
 async function runOCR() {
-  const prog = document.getElementById('prog-wrap');
-  const label = document.getElementById('prog-label');
-  const bar = document.getElementById('prog-bar');
-
-  prog.classList.add('show');
-  label.textContent = 'Αποστολή στο Google Vision...';
-  bar.style.width = '20%';
-  document.getElementById('btn-analyze').disabled = true;
-  document.getElementById('status-scan').className = 'status';
-
+  const prog=document.getElementById('prog-wrap');
+  const label=document.getElementById('prog-label');
+  const bar=document.getElementById('prog-bar');
+  prog.classList.add('show'); label.textContent='Αποστολή για ανάλυση...'; bar.style.width='20%';
+  document.getElementById('btn-analyze').disabled=true;
+  document.getElementById('status-scan').className='status';
   try {
-    const base64 = state.photoData.split(',')[1];
-    bar.style.width = '40%';
-
-    const res = await fetch(
-      'https://vision.googleapis.com/v1/images:annotate?key=' + VISION_KEY,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          requests: [{
-            image: { content: base64 },
-            features: [{ type: 'TEXT_DETECTION', maxResults: 1 }],
-            imageContext: { languageHints: ['el', 'en'] }
-          }]
-        })
-      }
-    );
-
-    bar.style.width = '80%';
+    bar.style.width='50%';
+    const res  = await fetch(SERVER+'/api/ocr',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:S.code,image:S.photoData})});
+    bar.style.width='90%';
     const data = await res.json();
-
-    if (data.error) throw new Error(data.error.message);
-
-    const rawText = data.responses?.[0]?.fullTextAnnotation?.text || '';
-    console.log('Vision text:', rawText);
-
-    bar.style.width = '100%';
-    setTimeout(() => { prog.classList.remove('show'); bar.style.width = '0%'; }, 500);
-
-    const found = extractRx(rawText);
-
-    if (found.length > 0) {
-      showOCRResults(found);
+    if(!data.ok) throw new Error(data.error);
+    bar.style.width='100%';
+    setTimeout(()=>{prog.classList.remove('show');bar.style.width='0%';},400);
+    const found = extractRx(data.text);
+    if(found.length>0){
+      S.foundRx = found;
+      showOCRPanel(found);
+      showConfirm(found);
     } else {
-      setStatus('status-scan', '⚠️ Δεν βρέθηκαν αριθμοί. Δοκιμάστε πιο κοντά με καλό φωτισμό.', 'err');
-      document.getElementById('ocr-panel').innerHTML = '<div style="color:var(--danger);font-size:12px;">Δεν βρέθηκε τίποτα</div>';
+      setStatus('status-scan','⚠️ Δεν βρέθηκαν αριθμοί. Δοκιμάστε πιο κοντά με καλό φωτισμό.','err');
+      document.getElementById('ocr-panel').innerHTML='<div style="color:var(--danger);font-size:12px;">Δεν βρέθηκε τίποτα</div>';
     }
-
-  } catch(e) {
+  } catch(e){
     prog.classList.remove('show');
-    setStatus('status-scan', '❌ Σφάλμα: ' + e.message, 'err');
-    console.error(e);
+    setStatus('status-scan','❌ Σφάλμα: '+e.message,'err');
   }
-
-  document.getElementById('btn-analyze').disabled = false;
+  document.getElementById('btn-analyze').disabled=false;
 }
 
-// ── Extract prescriptions ──────────────────────────────────────────
 function extractRx(text) {
-  const found = [];
-  const norm = text
-    .replace(/[oO]/g, '0')
-    .replace(/[lI|]/g, '1')
-    .replace(/[sS]/g, '5')
-    .replace(/[bB]/g, '8')
-    .replace(/[zZ]/g, '2');
-
-  const codes = [];
-  const dateRx = /(\d{2}\/\d{2}\/\d{4})/g;
-
-  // Find codes: # + digits in both original and normalized
-  for (const src of [text, norm]) {
-    const r1 = /#\s*(\d{10,16})/g;
-    const r2 = /(?<!\d)(\d{16})(?!\d)/g;
+  const found=[], norm=text.replace(/[oO]/g,'0').replace(/[lI|]/g,'1').replace(/[sS]/g,'5').replace(/[bB]/g,'8').replace(/[zZ]/g,'2');
+  const codes=[], dateRx=/(\d{2}\/\d{2}\/\d{4})/g;
+  for(const src of [text,norm]){
     let m;
-    while ((m = r1.exec(src)) !== null)
-      if (!codes.find(c => c.code === m[1])) codes.push({ code: m[1], pos: m.index });
-    while ((m = r2.exec(src)) !== null)
-      if (!codes.find(c => c.code === m[1])) codes.push({ code: m[1], pos: m.index });
+    const r1=/#\s*(\d{10,16})/g, r2=/(?<!\d)(\d{16})(?!\d)/g;
+    while((m=r1.exec(src))!==null) if(!codes.find(c=>c.code===m[1])) codes.push({code:m[1],pos:m.index});
+    while((m=r2.exec(src))!==null) if(!codes.find(c=>c.code===m[1])) codes.push({code:m[1],pos:m.index});
   }
-
-  codes.sort((a, b) => a.pos - b.pos);
-
-  // Find dates
-  const dates = [];
-  let m;
-  while ((m = dateRx.exec(text)) !== null) dates.push({ date: m[1], pos: m.index });
-
-  codes.forEach(c => {
-    const next = dates.filter(d => d.pos > c.pos).slice(0, 2);
-    found.push({ code: c.code, ekdosi: next[0]?.date || '', lixis: next[1]?.date || '' });
+  codes.sort((a,b)=>a.pos-b.pos);
+  const dates=[]; let m;
+  while((m=dateRx.exec(text))!==null) dates.push({date:m[1],pos:m.index});
+  codes.forEach(c=>{
+    const next=dates.filter(d=>d.pos>c.pos).slice(0,2);
+    found.push({number:c.code, ekdosi:next[0]?.date||'', lixis:next[1]?.date||''});
   });
-
   return found;
 }
 
-// ── Show OCR results in side panel ────────────────────────────────
-function showOCRResults(found) {
-  const panel = document.getElementById('ocr-panel');
-  panel.innerHTML = found.map((p, i) => `
-    <div class="ocr-result-item">
-      <div class="ocr-result-code">${p.code}</div>
-      ${p.ekdosi ? '<div class="ocr-result-date">📅 ' + p.ekdosi + '</div>' : ''}
-      ${p.lixis  ? '<div class="ocr-result-date">⏰ ' + p.lixis  + '</div>' : ''}
-    </div>
-  `).join('');
-
-  const btn = document.getElementById('btn-proceed');
-  btn.style.display = 'block';
-  btn.onclick = () => {
-    found.forEach(p => {
-      if (!state.prescriptions.find(x => x.code === p.code)) state.prescriptions.push(p);
-    });
-    sortRx();
-    renderRxList();
-    toast('✅ ' + found.length + ' συνταγές προστέθηκαν', 'ok');
-    resetScanScreen();
-    goTo('review');
-  };
+function showOCRPanel(found) {
+  document.getElementById('ocr-panel').innerHTML = found.map(p=>`
+    <div class="ocr-item">
+      <div class="ocr-item-code">${p.number}</div>
+      ${p.ekdosi?'<div class="ocr-item-date">📅 '+p.ekdosi+'</div>':''}
+      ${p.lixis ?'<div class="ocr-item-date">⏰ '+p.lixis +'</div>':''}
+    </div>`).join('');
 }
 
-// ── Manual entry ───────────────────────────────────────────────────
-function addManual(inputId) {
-  const inp = document.getElementById(inputId);
-  const val = inp.value.trim();
-  if (!/^\d{10,16}$/.test(val)) { toast('Εισάγετε 10-16 ψηφία', 'err'); return; }
-  if (state.prescriptions.find(p => p.code === val)) { toast('Υπάρχει ήδη', 'err'); return; }
-  state.prescriptions.push({ code: val, ekdosi: '', lixis: '' });
-  sortRx();
-  renderRxList();
-  inp.value = '';
-  toast('Προστέθηκε!', 'ok');
-  goTo('review');
+function showConfirm(found) {
+  document.getElementById('div-confirm').style.display = 'block';
 }
 
-document.getElementById('btn-add-manual').addEventListener('click', () => addManual('inp-manual'));
-document.getElementById('btn-add-manual2').addEventListener('click', () => addManual('inp-manual2'));
-document.getElementById('inp-manual').addEventListener('keydown', e => { if (e.key === 'Enter') addManual('inp-manual'); });
-document.getElementById('inp-manual2').addEventListener('keydown', e => { if (e.key === 'Enter') addManual('inp-manual2'); });
-
-// ── Rx list render ─────────────────────────────────────────────────
-function renderRxList() {
-  const list = document.getElementById('rx-list');
-  const count = document.getElementById('rx-count');
-  const btn = document.getElementById('btn-go-print');
-
-  count.textContent = state.prescriptions.length;
-  btn.disabled = state.prescriptions.length === 0;
-
-  if (!state.prescriptions.length) {
-    list.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><p>Καμία συνταγή ακόμα</p></div>';
-    return;
-  }
-
-  list.innerHTML = state.prescriptions.map((p, i) => `
-    <div class="rx-item">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div class="rx-code">#${p.code}</div>
-        <button class="rm-btn" onclick="removeRx(${i})">✕</button>
-      </div>
-      <div style="margin-top:6px;">
-        <div class="rx-lbl">Αριθμός</div>
-        <input class="rx-num-input" value="${p.code}" onchange="state.prescriptions[${i}].code=this.value" maxlength="16">
-      </div>
-      <div class="rx-inputs">
-        <div>
-          <div class="rx-lbl">Έκδοση</div>
-          <input class="rx-input" value="${p.ekdosi}" placeholder="ΗΗ/ΜΜ/ΕΕΕΕ" onchange="state.prescriptions[${i}].ekdosi=this.value;sortRx();renderRxList()">
-        </div>
-        <div>
-          <div class="rx-lbl">Λήξη</div>
-          <input class="rx-input" value="${p.lixis}" placeholder="ΗΗ/ΜΜ/ΕΕΕΕ" onchange="state.prescriptions[${i}].lixis=this.value">
-        </div>
-      </div>
-    </div>
-  `).join('');
+// ── Output buttons ─────────────────────────────────────────────────
+async function saveAndOutput(outputFn) {
+  const label = document.getElementById('inp-label').value.trim();
+  // Save to server (anonymous — no label)
+  try {
+    const res  = await fetch(SERVER+'/api/lists',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({code:S.code, prescriptions:S.foundRx})});
+    const data = await res.json();
+    if(data.ok) {
+      // Save label locally
+      if(label) { S.labels[data.list_id]=label; saveLabels(); }
+      toast('✅ Αποθηκεύτηκε ('+data.list_id+')','ok');
+    }
+  } catch(e){ console.warn('Save failed:', e); }
+  // Run output regardless of save result
+  outputFn(S.foundRx, label);
 }
 
-function removeRx(i) {
-  state.prescriptions.splice(i, 1);
-  renderRxList();
-}
+document.getElementById('btn-out-print').addEventListener('click', () => {
+  saveAndOutput((rx, label) => { buildPrintZone(rx, label); setTimeout(()=>window.print(), 400); });
+});
 
-// ── Build barcode preview ──────────────────────────────────────────
-function buildPreview() {
-  const grid = document.getElementById('bc-preview');
-  if (!state.prescriptions.length) {
-    grid.innerHTML = '<div class="empty"><p>Δεν υπάρχουν συνταγές</p></div>';
-    return;
-  }
-  grid.innerHTML = state.prescriptions.map((p, i) => `
-    <div class="bc-card">
-      <div class="bc-idx">Συνταγή ${i+1}/${state.prescriptions.length}</div>
-      <canvas id="bc${i}"></canvas>
-      <div class="bc-num">${p.code}</div>
-      <div class="bc-dates">${p.ekdosi ? 'Έκδοση: '+p.ekdosi : ''}${p.ekdosi&&p.lixis?'<br>':''}${p.lixis ? 'Λήξη: '+p.lixis : ''}</div>
-    </div>
-  `).join('');
+document.getElementById('btn-out-screen').addEventListener('click', () => {
+  saveAndOutput((rx, label) => { showScreenBarcodes(rx, label); });
+});
 
-  setTimeout(() => {
-    state.prescriptions.forEach((p, i) => {
-      try {
-        JsBarcode('#bc' + i, p.code, { format:'CODE128', lineColor:'#000', width:1.5, height:55, displayValue:false, background:'#fff', margin:4 });
-      } catch(e) { console.error(e); }
-    });
-    buildPrintZone();
-  }, 100);
-}
-
-// ── Build print zone ───────────────────────────────────────────────
-function buildPrintZone() {
-  const name = document.getElementById('inp-name').value.trim();
-  const amka = document.getElementById('inp-amka').value.trim();
-  const now  = new Date().toLocaleDateString('el-GR') + ' ' + new Date().toLocaleTimeString('el-GR', {hour:'2-digit',minute:'2-digit'});
-
-  let cards = state.prescriptions.map((p, i) => `
-    <div class="pz-card">
-      <div class="pz-idx">Συνταγή ${i+1} από ${state.prescriptions.length}</div>
-      <canvas id="pbc${i}"></canvas>
-      <div class="pz-code">${p.code}</div>
-      <div class="pz-dates">${p.ekdosi?'Έκδοση: '+p.ekdosi:''}${p.ekdosi&&p.lixis?'<br>':''}${p.lixis?'Λήξη: '+p.lixis:''}</div>
-    </div>
-  `).join('');
-
-  document.getElementById('print-zone').innerHTML = `
-    <div class="pz-header">
-      <div><div class="pz-title">Φαρμακείο — Συνταγές ΙΔΙΚΑ</div></div>
-      <div class="pz-meta">Εκτύπωση: ${now}${name?'<br>Ασθενής: '+name:''}${amka?'<br>ΑΜΚΑ: '+amka:''}</div>
-    </div>
-    ${(name||amka) ? `<div class="pz-patient">${name?'<span><b>Ασθενής:</b> '+name+'</span>':''}${amka?'<span><b>ΑΜΚΑ:</b> '+amka+'</span>':''}</div>` : ''}
-    <div class="pz-grid">${cards}</div>
-  `;
-
-  setTimeout(() => {
-    state.prescriptions.forEach((p, i) => {
-      try {
-        JsBarcode('#pbc' + i, p.code, { format:'CODE128', lineColor:'#000', width:1.8, height:65, displayValue:false, background:'#fff', margin:4 });
-      } catch(e) {}
-    });
-  }, 150);
-}
+document.getElementById('btn-out-email').addEventListener('click', () => {
+  saveAndOutput((rx, label) => { sendEmail(rx, label); });
+});
 
 // ── Print ──────────────────────────────────────────────────────────
-document.getElementById('btn-print').addEventListener('click', () => {
-  buildPrintZone();
-  setTimeout(() => {
-    const entry = {
-      ts: new Date().toLocaleDateString('el-GR') + ' ' + new Date().toLocaleTimeString('el-GR',{hour:'2-digit',minute:'2-digit'}),
-      count: state.prescriptions.length,
-      patient: document.getElementById('inp-name').value.trim() || '—'
-    };
-    state.history.unshift(entry);
-    if (state.history.length > 50) state.history.pop();
-    localStorage.setItem('ph_hist', JSON.stringify(state.history));
-    window.print();
-  }, 400);
-});
-
-// ── History ────────────────────────────────────────────────────────
-function renderHistory() {
-  const list = document.getElementById('hist-list');
-  if (!state.history.length) {
-    list.innerHTML = '<div class="empty"><div class="empty-icon">📜</div><p>Δεν υπάρχουν εκτυπώσεις</p></div>';
-    return;
-  }
-  list.innerHTML = state.history.map(h => `
-    <div class="hist-row">
-      <div><div style="font-weight:500;font-size:14px;">${h.patient}</div><div class="hist-ts">${h.ts}</div></div>
-      <span class="badge">${h.count} συνταγ${h.count===1?'ή':'ές'}</span>
+function buildPrintZone(rx, label) {
+  const now = new Date().toLocaleDateString('el-GR')+' '+new Date().toLocaleTimeString('el-GR',{hour:'2-digit',minute:'2-digit'});
+  const cards = rx.map((p,i)=>`
+    <div class="pz-card">
+      <div class="pz-idx">Συνταγή ${i+1} από ${rx.length}</div>
+      <canvas id="pbc${i}"></canvas>
+      <div class="pz-code">${p.number}</div>
+      <div class="pz-dates">${p.ekdosi?'Έκδοση: '+p.ekdosi:''}${p.ekdosi&&p.lixis?'<br>':''}${p.lixis?'Λήξη: '+p.lixis:''}</div>
+    </div>`).join('');
+  document.getElementById('print-zone').innerHTML=`
+    <div class="pz-hdr">
+      <div><div class="pz-title">Φαρμακείο — Συνταγές ΙΔΙΚΑ</div></div>
+      <div class="pz-meta">Εκτύπωση: ${now}${S.name?'<br>'+S.name:''}</div>
     </div>
-  `).join('');
+    ${label?`<div class="pz-label"><strong>Ετικέτα:</strong> ${label}</div>`:''}
+    <div class="pz-grid">${cards}</div>`;
+  setTimeout(()=>{
+    rx.forEach((p,i)=>{try{JsBarcode('#pbc'+i,p.number,{format:'CODE128',lineColor:'#000',width:1.8,height:65,displayValue:false,background:'#fff',margin:4});}catch(e){}});
+  },150);
 }
 
-document.getElementById('btn-clear-hist').addEventListener('click', () => {
-  state.history = [];
-  localStorage.setItem('ph_hist', '[]');
-  renderHistory();
-  toast('Καθαρίστηκε', 'ok');
-});
+// ── Screen barcodes ────────────────────────────────────────────────
+function showScreenBarcodes(rx, label, listId) {
+  // Set screen brightness hint
+  try { window.screen.orientation && screen.orientation.lock('portrait'); } catch(e){}
+
+  document.getElementById('bc-screen-title').textContent = label || (listId ? 'Λίστα #'+listId : 'Συνταγές');
+  const container = document.getElementById('bc-screen-container');
+  container.innerHTML = rx.map((p,i)=>{
+    const st = rxStatus(p.ekdosi, p.lixis);
+    return `
+      <div class="bc-screen-item">
+        <canvas id="bcs${i}" style="max-width:100%;"></canvas>
+        <div class="bc-screen-num">${p.number}</div>
+        <div class="bc-screen-dates">${p.ekdosi?'Έκδοση: '+p.ekdosi:''} ${p.lixis?'· Λήξη: '+p.lixis:''}</div>
+        <div class="bc-screen-status" style="color:${st==='active'?'#166534':st==='upcoming'?'#92400e':'#991b1b'}">${statusLabel(st)}</div>
+      </div>`;
+  }).join('');
+
+  // Store for print button
+  document.getElementById('btn-bc-print').onclick = () => { buildPrintZone(rx, label); setTimeout(()=>window.print(),400); };
+
+  setTimeout(()=>{
+    rx.forEach((p,i)=>{
+      try{JsBarcode('#bcs'+i,p.number,{format:'CODE128',lineColor:'#000',width:2.5,height:80,displayValue:false,background:'#fff',margin:8});}catch(e){}
+    });
+  },100);
+
+  goTo('barcodes');
+  // Hint for brightness
+  setTimeout(()=>toast('💡 Αυξήστε φωτεινότητα οθόνης για καλύτερη σάρωση',''),500);
+}
+
+document.getElementById('btn-back-to-lists').addEventListener('click', () => goTo('lists'));
+
+// ── Email ──────────────────────────────────────────────────────────
+function sendEmail(rx, label) {
+  const now  = new Date().toLocaleDateString('el-GR');
+  const subj = encodeURIComponent('Συνταγές ΙΔΙΚΑ'+(label?' - '+label:'')+' - '+now);
+  let body   = 'Συνταγές ΙΔΙΚΑ\n';
+  if(label) body += 'Ετικέτα: '+label+'\n';
+  body += 'Ημερομηνία: '+now+'\nΦαρμακείο: '+S.name+'\n\n';
+  rx.forEach((p,i)=>{
+    body += (i+1)+'. '+p.number+'\n';
+    if(p.ekdosi) body += '   Έκδοση: '+p.ekdosi+'\n';
+    if(p.lixis)  body += '   Λήξη:   '+p.lixis+'\n';
+    body += '\n';
+  });
+  body += '---\nΑποστολή από Συνταγές ΙΔΙΚΑ App';
+  window.location.href = 'mailto:?subject='+subj+'&body='+encodeURIComponent(body);
+  toast('📧 Άνοιγμα εφαρμογής email...','ok');
+}
+
+// ── Saved lists ────────────────────────────────────────────────────
+async function loadLists() {
+  const container = document.getElementById('lists-container');
+  container.innerHTML = '<div class="empty"><div class="empty-icon">⏳</div><p>Φόρτωση...</p></div>';
+  try {
+    const res  = await fetch(SERVER+'/api/lists/'+S.code);
+    const data = await res.json();
+    if(!data.ok) throw new Error(data.error);
+    renderLists(data.lists);
+  } catch(e){
+    container.innerHTML = '<div class="empty"><div class="empty-icon">❌</div><p>Σφάλμα φόρτωσης: '+e.message+'</p></div>';
+  }
+}
+
+function renderLists(lists) {
+  const container = document.getElementById('lists-container');
+  if(!lists.length){
+    container.innerHTML='<div class="empty"><div class="empty-icon">📋</div><p>Δεν υπάρχουν αποθηκευμένες λίστες</p></div>';
+    return;
+  }
+  container.innerHTML = lists.map(lst=>{
+    const label   = S.labels[lst.list_id] || '';
+    const created = new Date(lst.created).toLocaleDateString('el-GR')+' '+new Date(lst.created).toLocaleTimeString('el-GR',{hour:'2-digit',minute:'2-digit'});
+    const expires = new Date(lst.expires).toLocaleDateString('el-GR');
+    // Count statuses
+    let active=0,upcoming=0,expired=0;
+    lst.prescriptions.forEach(p=>{
+      const s=rxStatus(p.ekdosi,p.lixis);
+      if(s==='active')active++; else if(s==='upcoming')upcoming++; else expired++;
+    });
+    return `
+      <div class="list-item" onclick="openList('${lst.list_id}')">
+        <div style="flex:1;min-width:0;">
+          <div class="list-id">#${lst.list_id}</div>
+          <div class="list-label">${label || '(χωρίς ετικέτα)'}</div>
+          <div class="list-meta">${created} · ${lst.prescriptions.length} συνταγές · Λήξη: ${expires}</div>
+          <div class="list-badges">
+            ${active   ? '<span class="list-badge lb-active">✅ '+active+' ενεργές</span>' : ''}
+            ${upcoming ? '<span class="list-badge lb-upcoming">⏳ '+upcoming+' προσεχείς</span>' : ''}
+            ${expired  ? '<span class="list-badge lb-expired">❌ '+expired+' ληγμένες</span>' : ''}
+          </div>
+        </div>
+        <div style="color:var(--text3);font-size:20px;margin-left:8px;">›</div>
+      </div>`;
+  }).join('');
+}
+
+function openList(listId) {
+  // Find list data from last loaded
+  fetch(SERVER+'/api/lists/'+S.code)
+    .then(r=>r.json())
+    .then(data=>{
+      const lst = data.lists.find(l=>l.list_id===listId);
+      if(!lst) return;
+      const label = S.labels[listId] || '';
+      showScreenBarcodes(lst.prescriptions, label, listId);
+    });
+}
+
+document.getElementById('btn-refresh-lists').addEventListener('click', loadLists);
+document.getElementById('btn-bc-print').addEventListener('click', ()=>{});
+
+// ── Init ───────────────────────────────────────────────────────────
+init();
 </script>
 </body>
 </html>
