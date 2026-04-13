@@ -92,13 +92,16 @@ def ocr_azure(b64):
         data=img_bytes,
         params={'language': 'el', 'detectOrientation': 'true'})
     print(f'Azure status: {res.status_code}')
+    print(f'Azure response: {res.text[:800]}')
     res.raise_for_status()
+    resp = res.json()
+    print(f'Azure regions: {len(resp.get("regions",[]))}')
     lines = []
-    for region in res.json().get('regions', []):
+    for region in resp.get('regions', []):
         for line in region.get('lines', []):
             lines.append(' '.join(w['text'] for w in line.get('words', [])))
     result = '\n'.join(lines)
-    print(f'Azure text: {repr(result[:200])}')
+    print(f'Azure extracted: {repr(result[:300])}')
     return result
 
 def ocr_google(b64):
