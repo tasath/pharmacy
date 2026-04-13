@@ -162,9 +162,12 @@ def do_ocr():
     try:
         text, used = run_ocr(image, service)
         log_usage(code, used)
+        print(f'OCR success: service={used}, text_length={len(text)}, text_preview={repr(text[:200])}')
         return jsonify({'ok': True, 'text': text, 'service': used, 'pharmacy': pharmacy.get('name', code)})
     except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+        import traceback
+        print(f'OCR ERROR: {traceback.format_exc()}')
+        return jsonify({'ok': False, 'error': str(e), 'service': service}), 500
 
 @app.route('/api/lists', methods=['POST'])
 def save_list():
