@@ -5,7 +5,7 @@ import os, json, base64, requests, datetime, uuid, hashlib
 app = Flask(__name__)
 CORS(app)
 
-ADMIN_PASSWORD_DEFAULT = hashlib.sha256(b'admin1234').hexdigest()
+ADMIN_PASSWORD_DEFAULT = 'ac9689e2272427085e35b9d3e3e8bed88cb3434828b43b86fc0596cad4c6e270'  # admin1234
 AZURE_KEY      = os.environ.get('AZURE_VISION_KEY', 'AW6kWq4EcqCgZiXU2vKrDcyFeGOKMcPi7WwtYrlQ7oZ5xvEwXN9gJQQJ99CDAC5RqLJXJ3w3AAAFACOGsQqg')
 AZURE_ENDPOINT = os.environ.get('AZURE_ENDPOINT',   'https://pharmacy-vision.cognitiveservices.azure.com/')
 GOOGLE_KEY     = os.environ.get('GOOGLE_VISION_KEY', '')
@@ -87,6 +87,16 @@ def check_admin():
     return hashlib.sha256(auth.encode()).hexdigest() == data['settings'].get('admin_password', ADMIN_PASSWORD_DEFAULT)
 
 # ── Routes ─────────────────────────────────────────────────────────
+@app.route('/admin/reset-password')
+def reset_password():
+    # Temporary endpoint - resets admin password to admin1234
+    # DELETE this route after first login
+    data = load_data()
+    import hashlib
+    data['settings']['admin_password'] = hashlib.sha256(b'admin1234').hexdigest()
+    save_data(data)
+    return jsonify({'ok': True, 'message': 'Password reset to admin1234'})
+
 @app.route('/health')
 def health():
     cleanup_lists()
