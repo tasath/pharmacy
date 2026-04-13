@@ -137,9 +137,27 @@ tr:last-child td{border-bottom:none;}
       <table>
         <thead><tr>
           <th>Φαρμακείο</th><th>Κωδικός</th><th>OCR</th>
-          <th>Σκάνς/μήνα</th><th>Λίστες</th><th>Κατάσταση</th><th></th>
+          <th>Σκάνς/μήνα</th><th>Λίστες</th><th>Κατάσταση</th><th>Ενέργειες</th>
         </tr></thead>
         <tbody id="pharm-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Lists Management -->
+  <div class="card">
+    <div class="card-head">
+      <span>📋 Αποθηκευμένες Λίστες</span>
+      <select id="sel-pharmacy-filter" onchange="loadAdminLists()" style="font-size:12px;padding:4px 8px;">
+        <option value="">Όλα τα φαρμακεία</option>
+      </select>
+    </div>
+    <div class="card-body" style="padding:0;">
+      <table>
+        <thead><tr>
+          <th>ID</th><th>Φαρμακείο</th><th>Συνταγές</th><th>Δημιουργία</th><th>Λήξη</th><th></th>
+        </tr></thead>
+        <tbody id="lists-tbody"></tbody>
       </table>
     </div>
   </div>
@@ -161,7 +179,7 @@ tr:last-child td{border-bottom:none;}
 </div>
 
 <script>
-const SERVER = 'https://pharmacy-backend-ay17.onrender.com';
+const SERVER = 'https://pharmacy-backend.azurewebsites.net';
 let pwd = '', adminData = {};
 
 // Login
@@ -190,6 +208,15 @@ function render() {
   // Set retention
   const rm = adminData.settings?.retention_months || 6;
   document.getElementById('sel-retention').value = rm;
+  // Populate pharmacy filter
+  const sel = document.getElementById('sel-pharmacy-filter');
+  const currentVal = sel.value;
+  sel.innerHTML = '<option value="">Όλα τα φαρμακεία</option>';
+  Object.entries(adminData.pharmacies||{}).forEach(([code,p])=>{
+    sel.innerHTML += `<option value="${code}" ${currentVal===code?'selected':''}>${p.name}</option>`;
+  });
+  // Load lists
+  loadAdminLists();
 }
 
 function renderStats() {
@@ -292,6 +319,56 @@ document.getElementById('btn-save-retention').addEventListener('click', async()=
 });
 
 // Change password
+async function loadAdminLists() {
+  const filterCode = document.getElementById('sel-pharmacy-filter').value;
+  const tbody = document.getElementById('lists-tbody');
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--text2);">Φόρτωση...</td></tr>';
+
+  // Load lists for all pharmacies or filtered
+  const pharmacies = adminData.pharmacies || {};
+  let allLists = [];
+
+  const codes = filterCode ? [filterCode] : Object.keys(pharmacies);
+  for (const code of codes) {
+    try {
+      const res = await fetch(SERVER+'/api/lists/'+code, {headers:{'X-Admin-Password':pwd}});
+      const data = await res.json();
+      if(data.ok) {
+        data.lists.forEach(l => { l.pharmacy_code = code; l.pharmacy_name = pharmacies[code]?.name || code; });
+        allLists = allLists.concat(data.lists);
+      }
+    } catch(e){}
+  }
+
+  allLists.sort((a,b) => new Date(b.created) - new Date(a.created));
+
+  if(!allLists.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--text2);">Δεν υπάρχουν λίστες</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = allLists.map(l => {
+    const created = new Date(l.created).toLocaleDateString('el-GR')+' '+new Date(l.created).toLocaleTimeString('el-GR',{hour:'2-digit',minute:'2-digit'});
+    const expires = new Date(l.expires).toLocaleDateString('el-GR');
+    return `<tr>
+      <td><span style="font-family:monospace;background:var(--green-light);color:var(--green);padding:2px 7px;border-radius:5px;font-size:12px;">#${l.list_id}</span></td>
+      <td>${l.pharmacy_name}</td>
+      <td>${l.prescriptions.length} συνταγές</td>
+      <td>${created}</td>
+      <td>${expires}</td>
+      <td><button class="btn sm danger" onclick="adminDeleteList('${l.list_id}','${l.pharmacy_code}')">✕ Διαγραφή</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function adminDeleteList(listId, code) {
+  if(!confirm('Διαγραφή λίστας #'+listId+';')) return;
+  const res = await fetch(SERVER+'/api/lists/'+listId+'?code='+code, {method:'DELETE'});
+  const data = await res.json();
+  if(data.ok) { await loadAdminLists(); }
+  else alert('Σφάλμα: '+data.error);
+}
+
 document.getElementById('btn-change-pwd').addEventListener('click', async()=>{
   const p = document.getElementById('new-pwd').value;
   if(p.length<6){ document.getElementById('pwd-alert').innerHTML='<div class="alert err">Τουλάχιστον 6 χαρακτήρες</div>'; return; }
