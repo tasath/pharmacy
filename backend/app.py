@@ -97,6 +97,18 @@ def reset_password():
     save_data(data)
     return jsonify({'ok': True, 'message': 'Password reset to admin1234'})
 
+@app.route('/admin/debug-password')
+def debug_password():
+    import hashlib
+    data = load_data()
+    stored = data['settings'].get('admin_password', 'NOT SET')
+    test = hashlib.sha256(b'admin1234').hexdigest()
+    return jsonify({
+        'stored': stored,
+        'expected': test,
+        'match': stored == test
+    })
+
 @app.route('/health')
 def health():
     cleanup_lists()
