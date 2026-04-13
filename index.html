@@ -412,6 +412,7 @@ function showInitial() {
   document.getElementById('div-confirm').style.display = 'none';
   document.getElementById('inp-label').value = '';
   S.foundRx = [];
+  currentListId = null;
 }
 
 function showPreview(dataUrl) {
@@ -446,6 +447,35 @@ document.getElementById('btn-add-manual').addEventListener('click', () => {
 });
 document.getElementById('inp-manual').addEventListener('keydown', e=>{if(e.key==='Enter') document.getElementById('btn-add-manual').click();});
 
+// ── Compress image before sending ────────────────────────────────
+async function compressImage(dataUrl, maxBytes=3500000) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let w = img.width, h = img.height;
+      const maxDim = 2400;
+      if (w > maxDim || h > maxDim) {
+        const ratio = Math.min(maxDim/w, maxDim/h);
+        w = Math.round(w * ratio);
+        h = Math.round(h * ratio);
+      }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      let quality = 0.85;
+      const tryCompress = () => {
+        const result = canvas.toDataURL('image/jpeg', quality);
+        const bytes = Math.round((result.length - 'data:image/jpeg;base64,'.length) * 3/4);
+        console.log('Compress quality=' + quality + ' size=' + Math.round(bytes/1024) + 'KB');
+        if (bytes <= maxBytes || quality <= 0.3) { resolve(result); }
+        else { quality -= 0.15; tryCompress(); }
+      };
+      tryCompress();
+    };
+    img.src = dataUrl;
+  });
+}
+
 // ── OCR ────────────────────────────────────────────────────────────
 document.getElementById('btn-analyze').addEventListener('click', runOCR);
 
@@ -457,8 +487,12 @@ async function runOCR() {
   document.getElementById('btn-analyze').disabled=true;
   document.getElementById('status-scan').className='status';
   try {
+    bar.style.width='30%';
+    label.textContent='Συμπίεση εικόνας...';
+    const compressed = await compressImage(S.photoData);
     bar.style.width='50%';
-    const res  = await fetch(SERVER+'/api/ocr',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:S.code,image:S.photoData})});
+    label.textContent='Αποστολή για ανάλυση...';
+    const res  = await fetch(SERVER+'/api/ocr',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:S.code,image:compressed})});
     bar.style.width='90%';
     const data = await res.json();
     if(!data.ok) throw new Error(data.error);
@@ -513,20 +547,29 @@ function showConfirm(found) {
 }
 
 // ── Output buttons ─────────────────────────────────────────────────
-async function saveAndOutput(outputFn) {
+// Track if current scan has been saved already
+let currentListId = null;
+
+async function saveOnce() {
+  if (currentListId) return currentListId; // already saved
   const label = document.getElementById('inp-label').value.trim();
-  // Save to server (anonymous — no label)
   try {
     const res  = await fetch(SERVER+'/api/lists',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({code:S.code, prescriptions:S.foundRx})});
     const data = await res.json();
     if(data.ok) {
-      // Save label locally
+      currentListId = data.list_id;
       if(label) { S.labels[data.list_id]=label; saveLabels(); }
-      toast('✅ Αποθηκεύτηκε ('+data.list_id+')','ok');
+      toast('✅ Αποθηκεύτηκε (#'+data.list_id+')','ok');
+      return data.list_id;
     }
   } catch(e){ console.warn('Save failed:', e); }
-  // Run output regardless of save result
+  return null;
+}
+
+async function saveAndOutput(outputFn) {
+  const label = document.getElementById('inp-label').value.trim();
+  await saveOnce();
   outputFn(S.foundRx, label);
 }
 
@@ -602,16 +645,48 @@ document.getElementById('btn-back-to-lists').addEventListener('click', () => goT
 function sendEmail(rx, label) {
   const now  = new Date().toLocaleDateString('el-GR');
   const subj = encodeURIComponent('Συνταγές ΙΔΙΚΑ'+(label?' - '+label:'')+' - '+now);
-  let body   = 'Συνταγές ΙΔΙΚΑ\n';
-  if(label) body += 'Ετικέτα: '+label+'\n';
-  body += 'Ημερομηνία: '+now+'\nΦαρμακείο: '+S.name+'\n\n';
-  rx.forEach((p,i)=>{
-    body += (i+1)+'. '+p.number+'\n';
-    if(p.ekdosi) body += '   Έκδοση: '+p.ekdosi+'\n';
-    if(p.lixis)  body += '   Λήξη:   '+p.lixis+'\n';
-    body += '\n';
+
+  // Generate barcodes as data URLs and build HTML email
+  const tempDiv = document.createElement('div');
+  tempDiv.style.position = 'absolute';
+  tempDiv.style.left = '-9999px';
+  document.body.appendChild(tempDiv);
+
+  const canvases = rx.map((p, i) => {
+    const canvas = document.createElement('canvas');
+    canvas.id = 'email-bc-'+i;
+    tempDiv.appendChild(canvas);
+    try {
+      JsBarcode('#email-bc-'+i, p.number, {
+        format:'CODE128', lineColor:'#000', width:2,
+        height:70, displayValue:false, background:'#fff', margin:6
+      });
+    } catch(e){}
+    return canvas.toDataURL('image/png');
   });
-  body += '---\nΑποστολή από Συνταγές ΙΔΙΚΑ App';
+
+  document.body.removeChild(tempDiv);
+
+  // Build email body with barcodes as inline images
+  let body = '<html><body style="font-family:Arial,sans-serif;padding:20px;">';
+  body += '<h2 style="color:#1a5f3f;">Συνταγές ΙΔΙΚΑ</h2>';
+  if(label) body += '<p><strong>Ετικέτα:</strong> '+label+'</p>';
+  body += '<p><strong>Ημερομηνία:</strong> '+now+'</p>';
+  body += '<p><strong>Φαρμακείο:</strong> '+S.name+'</p><hr>';
+
+  rx.forEach((p,i) => {
+    body += '<div style="margin:16px 0;padding:12px;border:1px solid #ccc;border-radius:6px;">';
+    body += '<p style="font-size:11px;color:#888;margin:0 0 4px;">Συνταγή '+(i+1)+' από '+rx.length+'</p>';
+    body += '<img src="'+canvases[i]+'" style="max-width:300px;display:block;">';
+    body += '<p style="font-family:monospace;font-weight:700;margin:6px 0 2px;">'+p.number+'</p>';
+    if(p.ekdosi) body += '<p style="font-size:12px;color:#444;margin:2px 0;">Έκδοση: '+p.ekdosi+'</p>';
+    if(p.lixis)  body += '<p style="font-size:12px;color:#444;margin:2px 0;">Λήξη: '+p.lixis+'</p>';
+    body += '</div>';
+  });
+
+  body += '</body></html>';
+
+  // Use mailto with HTML body
   window.location.href = 'mailto:?subject='+subj+'&body='+encodeURIComponent(body);
   toast('📧 Άνοιγμα εφαρμογής email...','ok');
 }
@@ -658,7 +733,10 @@ function renderLists(lists) {
             ${expired  ? '<span class="list-badge lb-expired">❌ '+expired+' ληγμένες</span>' : ''}
           </div>
         </div>
-        <div style="color:var(--text3);font-size:20px;margin-left:8px;">›</div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;margin-left:8px;">
+        <div style="color:var(--text3);font-size:20px;">›</div>
+        <button onclick="event.stopPropagation();deleteList('${lst.list_id}')" style="background:#fff0f0;border:1px solid #ffd0d0;color:var(--danger);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;">✕</button>
+      </div>
       </div>`;
   }).join('');
 }
@@ -676,6 +754,23 @@ function openList(listId) {
 }
 
 document.getElementById('btn-refresh-lists').addEventListener('click', loadLists);
+
+async function deleteList(listId) {
+  if (!confirm('Διαγραφή αυτής της λίστας;')) return;
+  try {
+    const res = await fetch(SERVER+'/api/lists/'+listId+'?code='+S.code, {method:'DELETE'});
+    const data = await res.json();
+    if(data.ok) {
+      // Remove local label too
+      delete S.labels[listId];
+      saveLabels();
+      toast('Διαγράφηκε','ok');
+      loadLists();
+    } else {
+      toast('Σφάλμα: '+data.error,'err');
+    }
+  } catch(e) { toast('Σφάλμα σύνδεσης','err'); }
+}
 document.getElementById('btn-bc-print').addEventListener('click', ()=>{});
 
 // ── Init ───────────────────────────────────────────────────────────
