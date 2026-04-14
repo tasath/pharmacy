@@ -627,6 +627,19 @@ document.getElementById('btn-out-email').addEventListener('click', async () => {
   }
 });
 
+function shareLink(link, label) {
+  if (navigator.share) {
+    navigator.share({
+      title: 'Συνταγές ΙΔΙΚΑ' + (label ? ' - ' + label : ''),
+      url: link
+    })
+    .then(() => toast('📤 Κοινοποιήθηκε!', 'ok'))
+    .catch(e => { if (e.name !== 'AbortError') copyToClipboard(link); });
+  } else {
+    copyToClipboard(link);
+  }
+}
+
 function copyToClipboard(link) {
   navigator.clipboard.writeText(link)
     .then(()=>toast('📋 Σύνδεσμος αντιγράφηκε! Επικολλήστε σε email/WhatsApp','ok'))
