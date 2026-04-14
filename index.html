@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#1a5f3f">
-<title>Συνταγές ΙΔΙΚΑ</title>
+<title>Σάρωση SMS Συνταγών</title>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <style>
 :root {
@@ -175,7 +175,7 @@ label.btn-big{display:flex;}
 <div id="setup-screen" style="display:none;">
   <div class="setup-wrap">
     <div class="setup-logo">💊</div>
-    <div class="setup-title">Συνταγές ΙΔΙΚΑ</div>
+    <div class="setup-title">Σάρωση SMS Συνταγών</div>
     <div class="setup-sub">Εισάγετε τον κωδικό πρόσβασης<br>που σας δόθηκε</div>
     <input type="text" class="setup-inp" id="setup-code" placeholder="FARM-XXXXXXXX" maxlength="20">
     <div class="status" id="setup-status"></div>
@@ -189,7 +189,7 @@ label.btn-big{display:flex;}
 <div class="hdr">
   <div class="hdr-icon">💊</div>
   <div>
-    <h1>Συνταγές ΙΔΙΚΑ</h1>
+    <h1>Σάρωση SMS Συνταγών</h1>
     <p id="hdr-pharmacy">Φόρτωση...</p>
   </div>
 </div>
@@ -313,7 +313,7 @@ label.btn-big{display:flex;}
 <div id="public-view" style="display:none;padding:14px 14px 40px;">
   <div style="background:var(--green);padding:16px;display:flex;align-items:center;gap:12px;margin:-14px -14px 16px;">
     <div style="width:38px;height:38px;background:rgba(255,255,255,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">💊</div>
-    <div><div style="font-size:18px;font-weight:600;color:#fff;">Συνταγές ΙΔΙΚΑ</div>
+    <div><div style="font-size:18px;font-weight:600;color:#fff;">Σάρωση SMS Συνταγών</div>
     <div style="font-size:11px;color:rgba(255,255,255,0.7);" id="pub-subtitle">Φόρτωση...</div></div>
   </div>
   <div id="pub-content"><div style="text-align:center;padding:40px;color:var(--text3);">⏳ Φόρτωση...</div></div>
@@ -619,7 +619,7 @@ document.getElementById('btn-out-email').addEventListener('click', async () => {
   if (!listId) { toast('Σφάλμα αποθήκευσης','err'); return; }
   const link = window.location.origin + window.location.pathname + '?list=' + listId;
   if (navigator.share) {
-    navigator.share({title:'Συνταγές ΙΔΙΚΑ'+(label?' - '+label:''), url:link})
+    navigator.share({title:'Σάρωση SMS Συνταγών'+(label?' - '+label:''), url:link})
       .then(()=>toast('📤 Κοινοποιήθηκε!','ok'))
       .catch(e=>{ if(e.name!=='AbortError') copyToClipboard(link); });
   } else {
@@ -630,7 +630,7 @@ document.getElementById('btn-out-email').addEventListener('click', async () => {
 function shareLink(link, label) {
   if (navigator.share) {
     navigator.share({
-      title: 'Συνταγές ΙΔΙΚΑ' + (label ? ' - ' + label : ''),
+      title: 'Σάρωση SMS Συνταγών' + (label ? ' - ' + label : ''),
       url: link
     })
     .then(() => toast('📤 Κοινοποιήθηκε!', 'ok'))
@@ -644,7 +644,7 @@ function copyToClipboard(link) {
   navigator.clipboard.writeText(link)
     .then(()=>toast('📋 Σύνδεσμος αντιγράφηκε! Επικολλήστε σε email/WhatsApp','ok'))
     .catch(()=>{
-      const subj = encodeURIComponent('Συνταγές ΙΔΙΚΑ');
+      const subj = encodeURIComponent('Σάρωση SMS Συνταγών');
       const body = encodeURIComponent('Δείτε τις συνταγές:\n'+link);
       window.location.href='mailto:?subject='+subj+'&body='+body;
     });
@@ -662,7 +662,7 @@ function buildPrintZone(rx, label) {
     </div>`).join('');
   document.getElementById('print-zone').innerHTML=`
     <div class="pz-hdr">
-      <div><div class="pz-title">Φαρμακείο — Συνταγές ΙΔΙΚΑ</div></div>
+      <div><div class="pz-title">Φαρμακείο — Σάρωση SMS Συνταγών</div></div>
       <div class="pz-meta">Εκτύπωση: ${now}${S.name?'<br>'+S.name:''}</div>
     </div>
     ${label?`<div class="pz-label"><strong>Ετικέτα:</strong> ${label}</div>`:''}
@@ -723,7 +723,7 @@ document.getElementById('btn-back-to-lists').addEventListener('click', () => goT
 // ── Email ──────────────────────────────────────────────────────────
 function sendEmail(rx, label) {
   const now = new Date().toLocaleDateString('el-GR');
-  const subj = encodeURIComponent('Συνταγές ΙΔΙΚΑ'+(label?' - '+label:'')+' - '+now);
+  const subj = encodeURIComponent('Σάρωση SMS Συνταγών'+(label?' - '+label:'')+' - '+now);
 
   // Build a printable HTML page with barcodes
   const tempDiv = document.createElement('div');
@@ -732,7 +732,7 @@ function sendEmail(rx, label) {
 
   // Build HTML content
   let html = `<div style="border-bottom:2px solid #1a5f3f;padding-bottom:8px;margin-bottom:12px;display:flex;justify-content:space-between;">
-    <div style="font-size:16px;font-weight:700;color:#1a5f3f;">Φαρμακείο — Συνταγές ΙΔΙΚΑ</div>
+    <div style="font-size:16px;font-weight:700;color:#1a5f3f;">Φαρμακείο — Σάρωση SMS Συνταγών</div>
     <div style="font-size:11px;color:#444;text-align:right;">Ημερομηνία: ${now}${label?'<br>Ετικέτα: '+label:''}<br>${S.name}</div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">`;
@@ -770,7 +770,7 @@ function sendEmail(rx, label) {
   // Build final static HTML with embedded barcode images
   let finalHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="font-family:Arial,sans-serif;padding:20px;max-width:700px;">';
   finalHtml += `<div style="border-bottom:2px solid #1a5f3f;padding-bottom:8px;margin-bottom:14px;">
-    <div style="font-size:16px;font-weight:700;color:#1a5f3f;">Φαρμακείο — Συνταγές ΙΔΙΚΑ</div>
+    <div style="font-size:16px;font-weight:700;color:#1a5f3f;">Φαρμακείο — Σάρωση SMS Συνταγών</div>
     <div style="font-size:11px;color:#444;margin-top:4px;">Ημερομηνία: ${now}${label?' &nbsp;|&nbsp; Ετικέτα: '+label:''} &nbsp;|&nbsp; ${S.name}</div>
   </div>
   <table width="100%" cellpadding="0" cellspacing="0"><tr>`;
@@ -810,7 +810,7 @@ function sendEmail(rx, label) {
     const file = new File([blob], 'syntagies-'+now.replace(/\//g,'-')+'.pdf', {type:'text/html'});
     if (navigator.canShare({files:[file]})) {
       navigator.share({
-        title: 'Συνταγές ΙΔΙΚΑ' + (label?' - '+label:''),
+        title: 'Σάρωση SMS Συνταγών' + (label?' - '+label:''),
         files: [file]
       }).then(() => toast('📤 Κοινοποίηση επιτυχής','ok'))
         .catch(e => {
