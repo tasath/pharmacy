@@ -178,9 +178,10 @@ tr:last-child td{border-bottom:none;}
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
 const SERVER = 'https://pharmacy-backend-ay17.onrender.com';
 let pwd = sessionStorage.getItem('admin_pwd') || '', adminData = {};
+
+document.addEventListener('DOMContentLoaded', function() {
 
 function showAdmin() {
   document.getElementById('login-screen').style.display='none';
