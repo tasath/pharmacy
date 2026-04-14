@@ -278,7 +278,10 @@ label.btn-big{display:flex;}
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
     <button class="btn" id="btn-back-to-lists">← Πίσω</button>
     <div style="font-size:13px;font-weight:600;color:var(--text2);" id="bc-screen-title">Λίστα</div>
-    <button class="btn" id="btn-bc-print">🖨</button>
+    <div style="display:flex;gap:6px;">
+      <button class="btn" id="btn-bc-share">📧</button>
+      <button class="btn" id="btn-bc-print">🖨</button>
+    </div>
   </div>
   <div id="bc-screen-container"></div>
 </div>
@@ -676,6 +679,20 @@ function showScreenBarcodes(rx, label, listId) {
 
   // Store for print button
   document.getElementById('btn-bc-print').onclick = () => { buildPrintZone(rx, label); setTimeout(()=>window.print(),400); };
+  document.getElementById('btn-bc-share').onclick = () => {
+    if (listId) {
+      const link = window.location.origin + window.location.pathname + '?list=' + listId;
+      shareLink(link, label);
+    } else {
+      // Scan result not yet saved — save first then share
+      saveOnce().then(id => {
+        if (id) {
+          const link = window.location.origin + window.location.pathname + '?list=' + id;
+          shareLink(link, label || '');
+        }
+      });
+    }
+  };
 
   setTimeout(()=>{
     rx.forEach((p,i)=>{
