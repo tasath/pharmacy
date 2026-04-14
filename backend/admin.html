@@ -62,7 +62,7 @@ tr:last-child td{border-bottom:none;}
 
 <div id="admin-main" style="display:none;">
 <div class="hdr">
-  <div><h1>💊 Admin Panel</h1><p>Διαχείριση Συνταγές ΙΔΙΚΑ</p></div>
+  <div><h1>💊 Admin Panel</h1><p>Διαχείριση Συνταγών</p></div>
   <button class="btn sm" id="btn-logout">Αποσύνδεση</button>
 </div>
 <div class="wrap">
@@ -80,8 +80,8 @@ tr:last-child td{border-bottom:none;}
       <div style="background:var(--green-light);border:1px solid #c5e0d0;border-radius:10px;padding:14px;display:flex;align-items:center;gap:16px;">
         <div style="font-size:32px;font-weight:700;color:var(--green);" id="cnt-google">-</div>
         <div>
-          <div style="font-size:13px;font-weight:600;color:var(--green);">Αιτήματα αυτόν τον μήνα</div>
-          <div style="font-size:11px;color:var(--text2);">1,000 δωρεάν/μήνα · Στη συνέχεια $1.50/1,000</div>
+          <div style="font-size:13px;font-weight:600;color:var(--green);">Αιτήματα αυτόν το μήνα</div>
+          <div style="font-size:11px;color:var(--text2);">1,000 δωρεάν/μήνα - Στη συνέχεια $1.50/1,000</div>
         </div>
       </div>
     </div>
@@ -125,7 +125,7 @@ tr:last-child td{border-bottom:none;}
       </div>
       <table>
         <thead><tr>
-          <th>Φαρμακείο</th><th>Κωδικός</th><th>Σκάνς/μήνα</th><th>Λίστες</th><th>Κατάσταση</th><th>Ενέργειες</th>
+          <th>Φαρμακείο</th><th>Κωδικός</th><th>Scans/μήνα</th><th>Λίστες</th><th>Κατάσταση</th><th>Ενέργειες</th>
         </tr></thead>
         <tbody id="pharm-tbody"></tbody>
       </table>
@@ -242,7 +242,7 @@ function renderStats() {
   const totalLists = Object.values(adminData.list_counts||{}).reduce((s,c)=>s+c,0);
   document.getElementById('stat-grid').innerHTML = `
     <div class="stat-card"><h3>Φαρμακεία</h3><div class="num">${pharmacies}</div><p>ενεργά</p></div>
-    <div class="stat-card"><h3>Σκάνς μήνα</h3><div class="num">${totalScans}</div><p>OCR αιτήματα</p></div>
+    <div class="stat-card"><h3>Scans μήνα</h3><div class="num">${totalScans}</div><p>OCR αιτήματα</p></div>
     <div class="stat-card"><h3>Αποθ. Λίστες</h3><div class="num">${totalLists}</div><p>σύνολο ενεργές</p></div>`;
 }
 
@@ -384,7 +384,7 @@ document.getElementById('btn-change-pwd').addEventListener('click', async()=>{
 
 // Global functions called from onclick
 async function resetPharmPwd(code, name) {
-  const newPwd = prompt('Νεος κωδικος για ' + name + ' (αδειο = αυτοματος):');
+  const newPwd = prompt('Νεος κωδικος για ' + name + ' (κενό = αυτόματος):');
   if (newPwd === null) return;
   const pwd_to_set = newPwd.trim() || Math.random().toString(36).slice(2,8).toUpperCase();
   const res = await fetch(SERVER+'/admin/pharmacy/'+code, {
@@ -394,7 +394,7 @@ async function resetPharmPwd(code, name) {
   });
   const d = await res.json();
   if(d.ok) {
-    alert('Νεος κωδικος για ' + name + ': ' + pwd_to_set);
+    alert('Νέος κωδικός για ' + name + ': ' + pwd_to_set);
     await load();
   }
 }
