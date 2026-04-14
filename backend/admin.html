@@ -302,7 +302,6 @@ function renderPharmacies() {
       <td><span class="dot ${p.active ? 'dot-on' : 'dot-off'}"></span>${p.active ? 'Ενεργό' : 'Ανενεργό'}</td>
       <td style="display:flex;gap:6px;flex-wrap:wrap;">
         <button class="btn sm ${p.active ? 'danger' : ''}" onclick="toggleActive('${code}', ${!p.active})">${p.active ? 'Απενεργ.' : 'Ενεργοπ.'}</button>
-        <button class="btn sm" onclick="resetPharmPwd('${code}', '${p.name}')">🔑</button>
         <button class="btn sm danger" onclick="delPharm('${code}', '${p.name}')">✕</button>
       </td>
     </tr>`).join('');
@@ -320,19 +319,6 @@ async function toggleActive(code, active) {
   else alert('Σφάλμα: ' + d.error);
 }
 
-async function resetPharmPwd(code, name) {
-  const newPwd = prompt('Νεος κωδικος για ' + name + '\n(αδειο = αυτοματος):');
-  if (newPwd === null) return;
-  const pwd_to_set = newPwd.trim() || Math.random().toString(36).slice(2, 8).toUpperCase();
-  const res = await fetch(SERVER + '/admin/pharmacy/' + code, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', 'X-Admin-Password': pwd },
-    body: JSON.stringify({ pharmacy_password: pwd_to_set })
-  });
-  const d = await res.json();
-  if (d.ok) alert('Νεος κωδικος για ' + name + ':\n\n' + pwd_to_set + '\n\nΔωστε τον στο φαρμακειο.');
-  else alert('Σφάλμα: ' + d.error);
-}
 
 async function delPharm(code, name) {
   if (!confirm('Διαγραφή "' + name + '"; Ο κωδικός δεν θα λειτουργεί πλέον.')) return;
