@@ -283,21 +283,6 @@ async function toggleActive(code,active){
   await fetch(SERVER+'/admin/pharmacy/'+code,{method:'PUT',headers:{'Content-Type':'application/json','X-Admin-Password':pwd},body:JSON.stringify({active})});
   await load();
 }
-async function resetPharmPwd(code, name) {
-  const newPwd = prompt('Νεος κωδικος για ' + name + ' (αδειο = αυτοματος):');
-  if (newPwd === null) return;
-  const pwd_to_set = newPwd.trim() || Math.random().toString(36).slice(2,8).toUpperCase();
-  const res = await fetch(SERVER+'/admin/pharmacy/'+code, {
-    method:'PUT',
-    headers:{'Content-Type':'application/json','X-Admin-Password':pwd},
-    body:JSON.stringify({pharmacy_password: pwd_to_set})
-  });
-  const d = await res.json();
-  if(d.ok) {
-    alert('Νεος κωδικος για ' + name + ': ' + pwd_to_set);
-    await load();
-  }
-}
 
 async function delPharm(code,name){
   if(!confirm('Διαγραφή "'+name+'";')) return;
@@ -377,6 +362,42 @@ async function loadAdminLists() {
   }).join('');
 }
 
+
+async function adminDeleteList(listId, code) {
+  if(!confirm('Διαγραφή λίστας #'+listId+';')) return;
+  const res = await fetch(SERVER+'/api/lists/'+listId+'?code='+code, {method:'DELETE'});
+  const data = await res.json();
+  if(data.ok) { await loadAdminLists(); }
+  else alert('Σφάλμα: '+data.error);
+}
+
+document.getElementById('btn-change-pwd').addEventListener('click', async()=>{
+  const p = document.getElementById('new-pwd').value;
+  if(p.length<6){ document.getElementById('pwd-alert').innerHTML='<div class="alert err">Τουλάχιστον 6 χαρακτήρες</div>'; return; }
+  await fetch(SERVER+'/admin/settings',{method:'PUT',headers:{'Content-Type':'application/json','X-Admin-Password':pwd},body:JSON.stringify({admin_password:p})});
+  pwd=p; document.getElementById('new-pwd').value='';
+  document.getElementById('pwd-alert').innerHTML='<div class="alert ok">✅ Άλλαξε</div>';
+  setTimeout(()=>document.getElementById('pwd-alert').innerHTML='',3000);
+});
+}); // DOMContentLoaded
+
+// Global functions called from onclick
+async function resetPharmPwd(code, name) {
+  const newPwd = prompt('Νεος κωδικος για ' + name + ' (αδειο = αυτοματος):');
+  if (newPwd === null) return;
+  const pwd_to_set = newPwd.trim() || Math.random().toString(36).slice(2,8).toUpperCase();
+  const res = await fetch(SERVER+'/admin/pharmacy/'+code, {
+    method:'PUT',
+    headers:{'Content-Type':'application/json','X-Admin-Password':pwd},
+    body:JSON.stringify({pharmacy_password: pwd_to_set})
+  });
+  const d = await res.json();
+  if(d.ok) {
+    alert('Νεος κωδικος για ' + name + ': ' + pwd_to_set);
+    await load();
+  }
+}
+
 async function viewList(listId, code, pharmacyName) {
   document.getElementById('list-modal').style.display = 'flex';
   document.getElementById('modal-title').textContent = 'Λίστα #'+listId+' — '+pharmacyName;
@@ -405,24 +426,6 @@ async function viewList(listId, code, pharmacyName) {
     document.getElementById('modal-content').innerHTML = '<div style="color:var(--danger);">Σφάλμα: '+e.message+'</div>';
   }
 }
-
-async function adminDeleteList(listId, code) {
-  if(!confirm('Διαγραφή λίστας #'+listId+';')) return;
-  const res = await fetch(SERVER+'/api/lists/'+listId+'?code='+code, {method:'DELETE'});
-  const data = await res.json();
-  if(data.ok) { await loadAdminLists(); }
-  else alert('Σφάλμα: '+data.error);
-}
-
-document.getElementById('btn-change-pwd').addEventListener('click', async()=>{
-  const p = document.getElementById('new-pwd').value;
-  if(p.length<6){ document.getElementById('pwd-alert').innerHTML='<div class="alert err">Τουλάχιστον 6 χαρακτήρες</div>'; return; }
-  await fetch(SERVER+'/admin/settings',{method:'PUT',headers:{'Content-Type':'application/json','X-Admin-Password':pwd},body:JSON.stringify({admin_password:p})});
-  pwd=p; document.getElementById('new-pwd').value='';
-  document.getElementById('pwd-alert').innerHTML='<div class="alert ok">✅ Άλλαξε</div>';
-  setTimeout(()=>document.getElementById('pwd-alert').innerHTML='',3000);
-});
-}); // DOMContentLoaded
 </script>
 </body>
 </html>
