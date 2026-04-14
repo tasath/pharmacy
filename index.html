@@ -306,6 +306,16 @@ label.btn-big{display:flex;}
 <div id="print-zone"></div>
 <div class="toast" id="toast"></div>
 
+<!-- Public barcode view: ?list=ID -->
+<div id="public-view" style="display:none;padding:14px 14px 40px;">
+  <div style="background:var(--green);padding:16px;display:flex;align-items:center;gap:12px;margin:-14px -14px 16px;">
+    <div style="width:38px;height:38px;background:rgba(255,255,255,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">💊</div>
+    <div><div style="font-size:18px;font-weight:600;color:#fff;">Συνταγές ΙΔΙΚΑ</div>
+    <div style="font-size:11px;color:rgba(255,255,255,0.7);" id="pub-subtitle">Φόρτωση...</div></div>
+  </div>
+  <div id="pub-content"><div style="text-align:center;padding:40px;color:var(--text3);">⏳ Φόρτωση...</div></div>
+</div>
+
 <script>
 'use strict';
 const SERVER = 'https://pharmacy-backend-ay17.onrender.com'; // Update after deploy
@@ -600,9 +610,29 @@ document.getElementById('btn-out-screen').addEventListener('click', () => {
   saveAndOutput((rx, label) => { showScreenBarcodes(rx, label); });
 });
 
-document.getElementById('btn-out-email').addEventListener('click', () => {
-  saveAndOutput((rx, label) => { sendEmail(rx, label); });
+document.getElementById('btn-out-email').addEventListener('click', async () => {
+  const label = document.getElementById('inp-label').value.trim();
+  const listId = await saveOnce();
+  if (!listId) { toast('Σφάλμα αποθήκευσης','err'); return; }
+  const link = window.location.origin + window.location.pathname + '?list=' + listId;
+  if (navigator.share) {
+    navigator.share({title:'Συνταγές ΙΔΙΚΑ'+(label?' - '+label:''), url:link})
+      .then(()=>toast('📤 Κοινοποιήθηκε!','ok'))
+      .catch(e=>{ if(e.name!=='AbortError') copyToClipboard(link); });
+  } else {
+    copyToClipboard(link);
+  }
 });
+
+function copyToClipboard(link) {
+  navigator.clipboard.writeText(link)
+    .then(()=>toast('📋 Σύνδεσμος αντιγράφηκε! Επικολλήστε σε email/WhatsApp','ok'))
+    .catch(()=>{
+      const subj = encodeURIComponent('Συνταγές ΙΔΙΚΑ');
+      const body = encodeURIComponent('Δείτε τις συνταγές:\n'+link);
+      window.location.href='mailto:?subject='+subj+'&body='+body;
+    });
+}
 
 // ── Print ──────────────────────────────────────────────────────────
 function buildPrintZone(rx, label) {
@@ -855,7 +885,39 @@ async function deleteList(listId) {
 document.getElementById('btn-bc-print').addEventListener('click', ()=>{});
 
 // ── Init ───────────────────────────────────────────────────────────
-init();
+async function loadPublicList(listId) {
+  document.getElementById('main-app').style.display='none';
+  document.getElementById('setup-screen').style.display='none';
+  document.getElementById('public-view').style.display='block';
+  try {
+    const res  = await fetch(SERVER+'/api/public/'+listId);
+    const data = await res.json();
+    if(!data.ok) throw new Error(data.error);
+    const rx = data.prescriptions;
+    document.getElementById('pub-subtitle').textContent =
+      new Date(data.created).toLocaleDateString('el-GR')+' · '+rx.length+' συνταγές';
+    const c = document.getElementById('pub-content');
+    c.innerHTML = rx.map((p,i)=>{
+      const st=rxStatus(p.ekdosi,p.lixis);
+      return `<div class="bc-screen-item">
+        <canvas id="pub-bc-${i}"></canvas>
+        <div class="bc-screen-num">${p.number}</div>
+        <div class="bc-screen-dates">${p.ekdosi?'Έκδοση: '+p.ekdosi:''} ${p.lixis?'· Λήξη: '+p.lixis:''}</div>
+        <div class="bc-screen-status" style="color:${st==='active'?'#166534':st==='upcoming'?'#92400e':'#991b1b'}">${statusLabel(st)}</div>
+      </div>`;
+    }).join('');
+    setTimeout(()=>{
+      rx.forEach((p,i)=>{try{JsBarcode('#pub-bc-'+i,p.number,{format:'CODE128',lineColor:'#000',width:2.5,height:80,displayValue:false,background:'#fff',margin:8});}catch(e){}});
+    },100);
+  } catch(e) {
+    document.getElementById('pub-content').innerHTML='<div style="text-align:center;padding:40px;color:var(--danger);">❌ Η λίστα δεν βρέθηκε ή έχει λήξει.</div>';
+  }
+}
+
+// Check URL for public list view
+const _urlP = new URLSearchParams(window.location.search);
+const _pubId = _urlP.get('list');
+if (_pubId) { loadPublicList(_pubId); } else { init(); }
 </script>
 </body>
 </html>
