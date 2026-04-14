@@ -6,8 +6,6 @@ app = Flask(__name__)
 CORS(app)
 
 # ── Config ─────────────────────────────────────────────────────────
-AZURE_KEY      = os.environ.get('AZURE_VISION_KEY', '')
-AZURE_ENDPOINT = os.environ.get('AZURE_ENDPOINT', 'https://pharmacy-vision.cognitiveservices.azure.com/')
 GOOGLE_KEY     = os.environ.get('GOOGLE_VISION_KEY', '')
 GIST_ID        = os.environ.get('GIST_ID', '')
 GITHUB_TOKEN   = os.environ.get('GITHUB_TOKEN', '')
@@ -23,45 +21,20 @@ def load_data():
     try:
         res = requests.get(
             f'https://api.github.com/gists/{GIST_ID}',
-            headers={
-                'Authorization': f'token {GITHUB_TOKEN}',
-                'Accept': 'application/vnd.github.v3+json'
-            }
-        )
+            headers={'Authorization': f'token {GITHUB_TOKEN}', 'Accept': 'application/vnd.github.v3+json'})
         res.raise_for_status()
-        content = res.json()['files'][GIST_FILENAME]['content']
-        return json.loads(content)
+        return json.loads(res.json()['files'][GIST_FILENAME]['content'])
     except Exception as e:
         print(f'load_data error: {e}')
-        return {
-            'pharmacies': {},
-            'settings': {
-                'ocr_default': 'azure',
-                'admin_password': DEFAULT_HASH,
-                'retention_months': 6
-            },
-            'usage': {},
-            'lists': {}
-        }
+        return {'pharmacies': {}, 'settings': {'admin_password': DEFAULT_HASH, 'retention_months': 6}, 'usage': {}, 'lists': {}}
 
 def save_data(data):
     try:
         res = requests.patch(
             f'https://api.github.com/gists/{GIST_ID}',
-            headers={
-                'Authorization': f'token {GITHUB_TOKEN}',
-                'Accept': 'application/vnd.github.v3+json'
-            },
-            json={
-                'files': {
-                    GIST_FILENAME: {
-                        'content': json.dumps(data, indent=2, ensure_ascii=False)
-                    }
-                }
-            }
-        )
+            headers={'Authorization': f'token {GITHUB_TOKEN}', 'Accept': 'application/vnd.github.v3+json'},
+            json={'files': {GIST_FILENAME: {'content': json.dumps(data, indent=2, ensure_ascii=False)}}})
         res.raise_for_status()
-        print('save_data ok')
     except Exception as e:
         print(f'save_data error: {e}')
 
@@ -74,109 +47,35 @@ def check_admin():
     stored = data['settings'].get('admin_password', DEFAULT_HASH)
     return make_hash(pwd) == stored
 
-# ── OCR ────────────────────────────────────────────────────────────
+# ── OCR — Google Vision only ───────────────────────────────────────
 def clean_b64(b64):
-    if ',' in b64:
-        b64 = b64.split(',')[1]
+    if ',' in b64: b64 = b64.split(',')[1]
     return b64.strip()
-
-def ocr_azure(b64):
-    b64       = clean_b64(b64)
-    img_bytes = base64.b64decode(b64)
-    print(f'Image size: {len(img_bytes)} bytes')
-    # Image is pre-resized by frontend - just send it
-    if len(img_bytes) > 4_000_000:
-        return ''  # safety check - should not happen
-    url = AZURE_ENDPOINT.rstrip('/') + '/vision/v3.2/ocr'
-    res = requests.post(url,
-        headers={
-            'Ocp-Apim-Subscription-Key': AZURE_KEY,
-            'Content-Type': 'application/octet-stream'
-        },
-        data=img_bytes,
-        params={'language': 'el', 'detectOrientation': 'true'})
-    print(f'Azure status: {res.status_code}')
-    if res.status_code != 200:
-        print(f'Azure error: {res.text[:300]}')
-    res.raise_for_status()
-    resp = res.json()
-    print(f'Azure regions: {len(resp.get("regions",[]))}')
-    lines = []
-    for region in resp.get('regions', []):
-        for line in region.get('lines', []):
-            lines.append(' '.join(w['text'] for w in line.get('words', [])))
-    result = '\n'.join(lines)
-    print(f'Azure extracted: {repr(result[:300])}')
-    return result
-
 
 def ocr_google(b64):
     b64 = clean_b64(b64)
     res = requests.post(
         f'https://vision.googleapis.com/v1/images:annotate?key={GOOGLE_KEY}',
-        json={'requests': [{
-            'image': {'content': b64},
-            'features': [{'type': 'TEXT_DETECTION'}],
-            'imageContext': {'languageHints': ['el', 'en']}
-        }]})
+        json={'requests': [{'image': {'content': b64}, 'features': [{'type': 'TEXT_DETECTION'}], 'imageContext': {'languageHints': ['el', 'en']}}]})
     res.raise_for_status()
     return res.json()['responses'][0].get('fullTextAnnotation', {}).get('text', '')
-
-def run_ocr(b64, service):
-    if service == 'azure':
-        try:
-            return ocr_azure(b64), 'azure'
-        except Exception as e:
-            print(f'Azure failed: {e}')
-            if GOOGLE_KEY:
-                return ocr_google(b64), 'google_fallback'
-            raise e
-    elif service == 'google':
-        try:
-            return ocr_google(b64), 'google'
-        except Exception as e:
-            print(f'Google failed: {e}')
-            return ocr_azure(b64), 'azure_fallback'
-    else:
-        try:
-            return ocr_azure(b64), 'azure'
-        except:
-            if GOOGLE_KEY:
-                return ocr_google(b64), 'google_fallback'
-            raise Exception('All OCR services failed')
 
 def log_usage(code, service):
     data = load_data()
     m    = get_month()
-    data['usage'].setdefault(m, {}).setdefault(code, {
-        'azure': 0, 'google': 0, 'google_fallback': 0, 'azure_fallback': 0, 'total': 0
-    })
+    data['usage'].setdefault(m, {}).setdefault(code, {'google': 0, 'total': 0})
     data['usage'][m][code][service] = data['usage'][m][code].get(service, 0) + 1
     data['usage'][m][code]['total'] += 1
     save_data(data)
 
 def cleanup_lists(data):
     now = datetime.datetime.now()
-    to_delete = [
-        lid for lid, lst in data.get('lists', {}).items()
-        if datetime.datetime.fromisoformat(lst['expires']) < now
-    ]
-    for lid in to_delete:
-        del data['lists'][lid]
+    to_delete = [lid for lid, lst in data.get('lists', {}).items()
+                 if datetime.datetime.fromisoformat(lst['expires']) < now]
+    for lid in to_delete: del data['lists'][lid]
     return data, len(to_delete) > 0
 
-# ── Public routes ──────────────────────────────────────────────────
-@app.route('/api/public/<list_id>', methods=['GET'])
-def public_list(list_id):
-    data = load_data()
-    lst  = data.get('lists', {}).get(list_id)
-    if not lst:
-        return jsonify({'ok': False, 'error': 'Η λίστα δεν βρέθηκε ή έχει λήξει'}), 404
-    # Check not expired
-    if datetime.datetime.fromisoformat(lst['expires']) < datetime.datetime.now():
-        return jsonify({'ok': False, 'error': 'Η λίστα έχει λήξει'}), 404
-    return jsonify({'ok': True, 'prescriptions': lst['prescriptions'], 'created': lst['created'], 'expires': lst['expires']})
-
+# ── Routes ─────────────────────────────────────────────────────────
 @app.route('/health')
 def health():
     return jsonify({'status': 'ok', 'time': datetime.datetime.now().isoformat()})
@@ -203,12 +102,11 @@ def do_ocr():
     pharmacy = data['pharmacies'].get(code)
     if not pharmacy or not pharmacy.get('active', True):
         return jsonify({'ok': False, 'error': 'Μη έγκυρος κωδικός πρόσβασης'}), 403
-    service = pharmacy.get('ocr_override') or data['settings'].get('ocr_default', 'azure')
     try:
-        text, used = run_ocr(image, service)
-        log_usage(code, used)
-        print(f'OCR ok: service={used} len={len(text)}')
-        return jsonify({'ok': True, 'text': text, 'service': used, 'pharmacy': pharmacy.get('name', code)})
+        text = ocr_google(image)
+        log_usage(code, 'google')
+        print(f'OCR ok: len={len(text)}')
+        return jsonify({'ok': True, 'text': text, 'service': 'google', 'pharmacy': pharmacy.get('name', code)})
     except Exception as e:
         import traceback
         print(f'OCR error: {traceback.format_exc()}')
@@ -225,13 +123,21 @@ def save_list():
     list_id   = str(uuid.uuid4())[:8].upper()
     expires   = (datetime.datetime.now() + datetime.timedelta(days=30 * retention)).isoformat()
     data.setdefault('lists', {})[list_id] = {
-        'pharmacy_code': code,
-        'created':       datetime.datetime.now().isoformat(),
-        'expires':       expires,
-        'prescriptions': body.get('prescriptions', [])
+        'pharmacy_code': code, 'created': datetime.datetime.now().isoformat(),
+        'expires': expires, 'prescriptions': body.get('prescriptions', [])
     }
     save_data(data)
     return jsonify({'ok': True, 'list_id': list_id, 'expires': expires})
+
+@app.route('/api/public/<list_id>', methods=['GET'])
+def public_list(list_id):
+    data = load_data()
+    lst  = data.get('lists', {}).get(list_id)
+    if not lst:
+        return jsonify({'ok': False, 'error': 'Η λίστα δεν βρέθηκε ή έχει λήξει'}), 404
+    if datetime.datetime.fromisoformat(lst['expires']) < datetime.datetime.now():
+        return jsonify({'ok': False, 'error': 'Η λίστα έχει λήξει'}), 404
+    return jsonify({'ok': True, 'prescriptions': lst['prescriptions'], 'created': lst['created'], 'expires': lst['expires']})
 
 @app.route('/api/lists/<code>', methods=['GET'])
 def get_lists(code):
@@ -240,12 +146,10 @@ def get_lists(code):
     if code not in data['pharmacies']:
         return jsonify({'ok': False, 'error': 'Invalid code'}), 403
     data, changed = cleanup_lists(data)
-    if changed:
-        save_data(data)
+    if changed: save_data(data)
     pharmacy_lists = [
         {'list_id': lid, 'created': lst['created'], 'expires': lst['expires'], 'prescriptions': lst['prescriptions']}
-        for lid, lst in data.get('lists', {}).items()
-        if lst['pharmacy_code'] == code
+        for lid, lst in data.get('lists', {}).items() if lst['pharmacy_code'] == code
     ]
     pharmacy_lists.sort(key=lambda x: x['created'], reverse=True)
     return jsonify({'ok': True, 'lists': pharmacy_lists})
@@ -255,13 +159,26 @@ def delete_list(list_id):
     code = request.args.get('code', '').strip().upper()
     data = load_data()
     lst  = data.get('lists', {}).get(list_id)
-    if not lst:
-        return jsonify({'ok': False, 'error': 'Not found'}), 404
-    if lst['pharmacy_code'] != code:
-        return jsonify({'ok': False, 'error': 'Unauthorized'}), 403
+    if not lst: return jsonify({'ok': False, 'error': 'Not found'}), 404
+    if lst['pharmacy_code'] != code: return jsonify({'ok': False, 'error': 'Unauthorized'}), 403
     del data['lists'][list_id]
     save_data(data)
     return jsonify({'ok': True})
+
+# ── Pharmacy password (stored in Gist) ────────────────────────────
+@app.route('/api/pharmacy/login', methods=['POST'])
+def pharmacy_login():
+    body = request.get_json()
+    code = body.get('code', '').strip().upper()
+    pwd  = body.get('password', '')
+    data = load_data()
+    pharmacy = data['pharmacies'].get(code)
+    if not pharmacy or not pharmacy.get('active', True):
+        return jsonify({'ok': False, 'error': 'Μη έγκυρος κωδικός'}), 403
+    stored = pharmacy.get('password_hash')
+    if stored and make_hash(pwd) != stored:
+        return jsonify({'ok': False, 'error': 'Λάθος κωδικός'}), 401
+    return jsonify({'ok': True, 'pharmacy': pharmacy.get('name', code)})
 
 # ── Admin routes ───────────────────────────────────────────────────
 @app.route('/admin/login', methods=['POST'])
@@ -275,71 +192,63 @@ def admin_login():
 
 @app.route('/admin/data')
 def admin_data():
-    if not check_admin():
-        return jsonify({'error': 'Unauthorized'}), 401
+    if not check_admin(): return jsonify({'error': 'Unauthorized'}), 401
     data        = load_data()
-    month       = get_month()
     list_counts = {}
     for lst in data.get('lists', {}).values():
         c = lst['pharmacy_code']
         list_counts[c] = list_counts.get(c, 0) + 1
     return jsonify({
-        'pharmacies': data['pharmacies'],
-        'settings':   data['settings'],
-        'usage':      data['usage'].get(month, {}),
+        'pharmacies':  data['pharmacies'],
+        'settings':    data['settings'],
+        'usage':       data['usage'].get(get_month(), {}),
         'list_counts': list_counts,
-        'month':      month
+        'month':       get_month()
     })
 
 @app.route('/admin/pharmacy', methods=['POST'])
 def add_pharmacy():
-    if not check_admin():
-        return jsonify({'error': 'Unauthorized'}), 401
+    if not check_admin(): return jsonify({'error': 'Unauthorized'}), 401
     name = request.get_json().get('name', '').strip()
-    if not name:
-        return jsonify({'ok': False, 'error': 'Name required'}), 400
+    if not name: return jsonify({'ok': False, 'error': 'Name required'}), 400
     code = 'FARM-' + str(uuid.uuid4())[:8].upper()
+    # Generate simple default password
+    default_pwd = str(uuid.uuid4())[:6].upper()
     data = load_data()
     data['pharmacies'][code] = {
-        'name':         name,
-        'active':       True,
-        'ocr_override': None,
-        'created':      datetime.datetime.now().isoformat()
+        'name': name, 'active': True,
+        'password_hash': make_hash(default_pwd),
+        'created': datetime.datetime.now().isoformat()
     }
     save_data(data)
-    return jsonify({'ok': True, 'code': code, 'name': name})
+    return jsonify({'ok': True, 'code': code, 'name': name, 'default_password': default_pwd})
 
 @app.route('/admin/pharmacy/<code>', methods=['PUT'])
 def update_pharmacy(code):
-    if not check_admin():
-        return jsonify({'error': 'Unauthorized'}), 401
+    if not check_admin(): return jsonify({'error': 'Unauthorized'}), 401
     body = request.get_json()
     data = load_data()
-    if code not in data['pharmacies']:
-        return jsonify({'ok': False, 'error': 'Not found'}), 404
-    for f in ['name', 'active', 'ocr_override']:
-        if f in body:
-            data['pharmacies'][code][f] = body[f]
+    if code not in data['pharmacies']: return jsonify({'ok': False, 'error': 'Not found'}), 404
+    for f in ['name', 'active']:
+        if f in body: data['pharmacies'][code][f] = body[f]
+    if 'pharmacy_password' in body:
+        data['pharmacies'][code]['password_hash'] = make_hash(body['pharmacy_password'])
     save_data(data)
     return jsonify({'ok': True})
 
 @app.route('/admin/pharmacy/<code>', methods=['DELETE'])
 def delete_pharmacy(code):
-    if not check_admin():
-        return jsonify({'error': 'Unauthorized'}), 401
+    if not check_admin(): return jsonify({'error': 'Unauthorized'}), 401
     data = load_data()
-    if code in data['pharmacies']:
-        del data['pharmacies'][code]
+    if code in data['pharmacies']: del data['pharmacies'][code]
     save_data(data)
     return jsonify({'ok': True})
 
 @app.route('/admin/settings', methods=['PUT'])
 def update_settings():
-    if not check_admin():
-        return jsonify({'error': 'Unauthorized'}), 401
+    if not check_admin(): return jsonify({'error': 'Unauthorized'}), 401
     body = request.get_json()
     data = load_data()
-    if 'ocr_default'      in body: data['settings']['ocr_default']     = body['ocr_default']
     if 'retention_months' in body: data['settings']['retention_months'] = int(body['retention_months'])
     if 'admin_password'   in body: data['settings']['admin_password']   = make_hash(body['admin_password'])
     save_data(data)

@@ -70,30 +70,19 @@ tr:last-child td{border-bottom:none;}
   <!-- Stats -->
   <div class="stat-grid" id="stat-grid"></div>
 
-  <!-- OCR Settings -->
+  <!-- OCR Stats -->
   <div class="card">
     <div class="card-head">
-      <span>🔬 OCR Services</span>
+      <span>🔬 Google Vision OCR</span>
       <span id="ocr-month" style="font-size:11px;color:var(--text2);font-weight:400;text-transform:none;"></span>
     </div>
     <div class="card-body">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
-        <div style="background:var(--green-light);border:1px solid #c5e0d0;border-radius:10px;padding:12px;">
-          <div style="font-size:13px;font-weight:600;color:var(--green);">Azure Computer Vision</div>
-          <div style="font-size:24px;font-weight:700;color:var(--green);margin:4px 0;" id="cnt-azure">-</div>
-          <div style="font-size:11px;color:var(--text2);">από 5,000 δωρεάν/μήνα</div>
+      <div style="background:var(--green-light);border:1px solid #c5e0d0;border-radius:10px;padding:14px;display:flex;align-items:center;gap:16px;">
+        <div style="font-size:32px;font-weight:700;color:var(--green);" id="cnt-google">-</div>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--green);">Αιτήματα αυτόν τον μήνα</div>
+          <div style="font-size:11px;color:var(--text2);">1,000 δωρεάν/μήνα · Στη συνέχεια $1.50/1,000</div>
         </div>
-        <div style="background:var(--green-light);border:1px solid #c5e0d0;border-radius:10px;padding:12px;">
-          <div style="font-size:13px;font-weight:600;color:var(--green);">Google Vision</div>
-          <div style="font-size:24px;font-weight:700;color:var(--green);margin:4px 0;" id="cnt-google">-</div>
-          <div style="font-size:11px;color:var(--text2);">από 1,000 δωρεάν/μήνα</div>
-        </div>
-      </div>
-      <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Προεπιλογή OCR:</div>
-      <div class="toggle-group" id="ocr-toggle">
-        <button class="tgl" data-val="azure">Azure (Κύριο)</button>
-        <button class="tgl" data-val="google">Google</button>
-        <button class="tgl" data-val="auto">Auto-failover</button>
       </div>
     </div>
   </div>
@@ -136,8 +125,7 @@ tr:last-child td{border-bottom:none;}
       </div>
       <table>
         <thead><tr>
-          <th>Φαρμακείο</th><th>Κωδικός</th><th>OCR</th>
-          <th>Σκάνς/μήνα</th><th>Λίστες</th><th>Κατάσταση</th><th>Ενέργειες</th>
+          <th>Φαρμακείο</th><th>Κωδικός</th><th>Σκάνς/μήνα</th><th>Λίστες</th><th>Κατάσταση</th><th>Ενέργειες</th>
         </tr></thead>
         <tbody id="pharm-tbody"></tbody>
       </table>
@@ -162,6 +150,17 @@ tr:last-child td{border-bottom:none;}
     </div>
   </div>
 
+  <!-- List detail modal -->
+  <div id="list-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:12px;padding:24px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h3 style="font-size:16px;font-weight:600;" id="modal-title">Λίστα</h3>
+        <button onclick="document.getElementById('list-modal').style.display='none'" class="btn sm">✕ Κλείσιμο</button>
+      </div>
+      <div id="modal-content"></div>
+    </div>
+  </div>
+
   <!-- Security -->
   <div class="card">
     <div class="card-head">🔐 Κωδικός Διαχειριστή</div>
@@ -180,20 +179,36 @@ tr:last-child td{border-bottom:none;}
 
 <script>
 const SERVER = 'https://pharmacy-backend-ay17.onrender.com';
-let pwd = '', adminData = {};
+let pwd = sessionStorage.getItem('admin_pwd') || '', adminData = {};
 
-// Login
+function showAdmin() {
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('admin-main').style.display='block';
+  load();
+}
+
+// Auto-login if session exists
+if (pwd) { showAdmin(); }
+
 document.getElementById('btn-login').addEventListener('click', async () => {
   const p = document.getElementById('login-pwd').value;
   try {
     const res = await fetch(SERVER+'/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:p})});
     const d = await res.json();
-    if(d.ok){ pwd=p; document.getElementById('login-screen').style.display='none'; document.getElementById('admin-main').style.display='block'; load(); }
-    else { document.getElementById('login-err').textContent=d.error||'Λάθος κωδικός'; document.getElementById('login-err').style.display='block'; }
+    if(d.ok){
+      pwd=p;
+      sessionStorage.setItem('admin_pwd', pwd);
+      showAdmin();
+    } else {
+      document.getElementById('login-err').textContent=d.error||'Λάθος κωδικός';
+      document.getElementById('login-err').style.display='block';
+    }
   } catch(e){ document.getElementById('login-err').textContent='Σφάλμα: '+e.message; document.getElementById('login-err').style.display='block'; }
 });
 document.getElementById('login-pwd').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('btn-login').click();});
-document.getElementById('btn-logout').addEventListener('click',()=>{pwd='';location.reload();});
+document.getElementById('btn-logout').addEventListener('click',()=>{
+  pwd=''; sessionStorage.removeItem('admin_pwd'); location.reload();
+});
 
 async function load() {
   const res = await fetch(SERVER+'/admin/data',{headers:{'X-Admin-Password':pwd}});
@@ -232,20 +247,10 @@ function renderStats() {
 function renderOCR() {
   const m = adminData.month||'';
   document.getElementById('ocr-month').textContent = 'Μήνας: '+m;
-  let azure=0, google=0;
-  Object.values(adminData.usage||{}).forEach(u=>{ azure+=(u.azure||0)+(u.azure_fallback||0); google+=(u.google||0)+(u.google_fallback||0); });
-  document.getElementById('cnt-azure').textContent = azure;
+  let google=0;
+  Object.values(adminData.usage||{}).forEach(u=>{ google+=(u.google||0)+(u.google_fallback||0); });
   document.getElementById('cnt-google').textContent = google;
-  const cur = adminData.settings?.ocr_default||'azure';
-  document.querySelectorAll('#ocr-toggle .tgl').forEach(b=>b.classList.toggle('active',b.dataset.val===cur));
 }
-
-document.querySelectorAll('#ocr-toggle .tgl').forEach(b=>{
-  b.addEventListener('click', async()=>{
-    await fetch(SERVER+'/admin/settings',{method:'PUT',headers:{'Content-Type':'application/json','X-Admin-Password':pwd},body:JSON.stringify({ocr_default:b.dataset.val})});
-    await load();
-  });
-});
 
 function renderPharmacies() {
   const tbody = document.getElementById('pharm-tbody');
@@ -260,32 +265,40 @@ function renderPharmacies() {
     <tr>
       <td><strong>${p.name}</strong><br><span style="font-size:11px;color:var(--text2);">Από: ${new Date(p.created).toLocaleDateString('el-GR')}</span></td>
       <td><span class="code-badge">${code}</span></td>
-      <td>
-        <select onchange="setOCR('${code}',this.value)" style="font-size:12px;padding:4px 8px;">
-          <option value="" ${!p.ocr_override?'selected':''}>Προεπιλογή</option>
-          <option value="azure" ${p.ocr_override==='azure'?'selected':''}>Azure</option>
-          <option value="google" ${p.ocr_override==='google'?'selected':''}>Google</option>
-          <option value="auto" ${p.ocr_override==='auto'?'selected':''}>Auto</option>
-        </select>
-      </td>
+
       <td>${usage[code]?.total||0}</td>
       <td>${lc[code]||0}</td>
       <td><span class="dot ${p.active?'dot-on':'dot-off'}"></span>${p.active?'Ενεργό':'Ανενεργό'}</td>
       <td style="display:flex;gap:6px;flex-wrap:wrap;">
         <button class="btn sm ${p.active?'danger':''}" onclick="toggleActive('${code}',${!p.active})">${p.active?'Απενεργ.':'Ενεργοπ.'}</button>
+        <button class="btn sm" onclick="resetPharmPwd('${code}','${p.name}')">🔑</button>
         <button class="btn sm danger" onclick="delPharm('${code}','${p.name}')">✕</button>
       </td>
     </tr>`).join('');
 }
 
-async function setOCR(code,val){
-  await fetch(SERVER+'/admin/pharmacy/'+code,{method:'PUT',headers:{'Content-Type':'application/json','X-Admin-Password':pwd},body:JSON.stringify({ocr_override:val||null})});
-  await load();
-}
+
 async function toggleActive(code,active){
   await fetch(SERVER+'/admin/pharmacy/'+code,{method:'PUT',headers:{'Content-Type':'application/json','X-Admin-Password':pwd},body:JSON.stringify({active})});
   await load();
 }
+async function resetPharmPwd(code, name) {
+  const newPwd = prompt('Νέος κωδικός για "'+name+'":
+(αφήστε κενό για αυτόματη δημιουργία)');
+  if (newPwd === null) return; // cancelled
+  const pwd_to_set = newPwd.trim() || Math.random().toString(36).slice(2,8).toUpperCase();
+  const res = await fetch(SERVER+'/admin/pharmacy/'+code, {
+    method:'PUT',
+    headers:{'Content-Type':'application/json','X-Admin-Password':pwd},
+    body:JSON.stringify({pharmacy_password: pwd_to_set})
+  });
+  const d = await res.json();
+  if(d.ok) {
+    alert('✅ Νέος κωδικός για "'+name+'":\n\n' + pwd_to_set + '\n\nΔώστε τον στο φαρμακείο.');
+    await load();
+  }
+}
+
 async function delPharm(code,name){
   if(!confirm('Διαγραφή "'+name+'";')) return;
   await fetch(SERVER+'/admin/pharmacy/'+code,{method:'DELETE',headers:{'X-Admin-Password':pwd}});
@@ -356,9 +369,41 @@ async function loadAdminLists() {
       <td>${l.prescriptions.length} συνταγές</td>
       <td>${created}</td>
       <td>${expires}</td>
-      <td><button class="btn sm danger" onclick="adminDeleteList('${l.list_id}','${l.pharmacy_code}')">✕ Διαγραφή</button></td>
+      <td style="display:flex;gap:6px;">
+        <button class="btn sm" onclick="viewList('${l.list_id}','${l.pharmacy_code}','${l.pharmacy_name}')">👁 Προβολή</button>
+        <button class="btn sm danger" onclick="adminDeleteList('${l.list_id}','${l.pharmacy_code}')">✕</button>
+      </td>
     </tr>`;
   }).join('');
+}
+
+async function viewList(listId, code, pharmacyName) {
+  document.getElementById('list-modal').style.display = 'flex';
+  document.getElementById('modal-title').textContent = 'Λίστα #'+listId+' — '+pharmacyName;
+  document.getElementById('modal-content').innerHTML = '<div style="text-align:center;padding:20px;color:var(--text2);">Φόρτωση...</div>';
+  try {
+    const res  = await fetch(SERVER+'/api/lists/'+code, {headers:{'X-Admin-Password':pwd}});
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    const lst = data.lists.find(l => l.list_id === listId);
+    if (!lst) throw new Error('Δεν βρέθηκε');
+    const created = new Date(lst.created).toLocaleDateString('el-GR')+' '+new Date(lst.created).toLocaleTimeString('el-GR',{hour:'2-digit',minute:'2-digit'});
+    const expires = new Date(lst.expires).toLocaleDateString('el-GR');
+    let html = `<p style="font-size:13px;color:var(--text2);margin-bottom:14px;">Δημιουργία: ${created} &nbsp;·&nbsp; Λήξη: ${expires}</p>`;
+    html += lst.prescriptions.map((p,i) => `
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:4px;">Συνταγή ${i+1} από ${lst.prescriptions.length}</div>
+        <div style="font-family:monospace;font-size:14px;font-weight:600;color:var(--green);">${p.number}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:4px;">
+          ${p.ekdosi?'Έκδοση: '+p.ekdosi:''}
+          ${p.ekdosi&&p.lixis?' &nbsp;·&nbsp; ':''}
+          ${p.lixis?'Λήξη: '+p.lixis:''}
+        </div>
+      </div>`).join('');
+    document.getElementById('modal-content').innerHTML = html;
+  } catch(e) {
+    document.getElementById('modal-content').innerHTML = '<div style="color:var(--danger);">Σφάλμα: '+e.message+'</div>';
+  }
 }
 
 async function adminDeleteList(listId, code) {
