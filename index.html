@@ -662,52 +662,101 @@ document.getElementById('btn-back-to-lists').addEventListener('click', () => goT
 
 // ── Email ──────────────────────────────────────────────────────────
 function sendEmail(rx, label) {
-  const now  = new Date().toLocaleDateString('el-GR');
+  const now = new Date().toLocaleDateString('el-GR');
   const subj = encodeURIComponent('Συνταγές ΙΔΙΚΑ'+(label?' - '+label:'')+' - '+now);
 
-  // Generate barcodes as data URLs and build HTML email
+  // Build a printable HTML page with barcodes
   const tempDiv = document.createElement('div');
-  tempDiv.style.position = 'absolute';
-  tempDiv.style.left = '-9999px';
+  tempDiv.style.cssText = 'position:absolute;left:-9999px;top:0;background:white;padding:20px;width:600px;font-family:Arial,sans-serif;';
   document.body.appendChild(tempDiv);
 
-  const canvases = rx.map((p, i) => {
-    const canvas = document.createElement('canvas');
-    canvas.id = 'email-bc-'+i;
-    tempDiv.appendChild(canvas);
+  // Build HTML content
+  let html = `<div style="border-bottom:2px solid #1a5f3f;padding-bottom:8px;margin-bottom:12px;display:flex;justify-content:space-between;">
+    <div style="font-size:16px;font-weight:700;color:#1a5f3f;">Φαρμακείο — Συνταγές ΙΔΙΚΑ</div>
+    <div style="font-size:11px;color:#444;text-align:right;">Ημερομηνία: ${now}${label?'<br>Ετικέτα: '+label:''}<br>${S.name}</div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">`;
+
+  rx.forEach((p, i) => {
+    html += `<div style="border:1px solid #ccc;padding:10px;text-align:center;" id="email-card-${i}">
+      <div style="font-size:10px;color:#888;margin-bottom:4px;">Συνταγή ${i+1} από ${rx.length}</div>
+      <canvas id="email-bc-${i}"></canvas>
+      <div style="font-family:monospace;font-size:11px;font-weight:700;margin-top:4px;">${p.number}</div>
+      <div style="font-size:10px;color:#444;margin-top:2px;">${p.ekdosi?'Έκδοση: '+p.ekdosi:''}${p.ekdosi&&p.lixis?'<br>':''}${p.lixis?'Λήξη: '+p.lixis:''}</div>
+    </div>`;
+  });
+
+  html += '</div>';
+  tempDiv.innerHTML = html;
+
+  // Generate barcodes into the temp div
+  rx.forEach((p, i) => {
     try {
       JsBarcode('#email-bc-'+i, p.number, {
-        format:'CODE128', lineColor:'#000', width:2,
-        height:70, displayValue:false, background:'#fff', margin:6
+        format:'CODE128', lineColor:'#000', width:1.8,
+        height:60, displayValue:false, background:'#fff', margin:4
       });
-    } catch(e){}
-    return canvas.toDataURL('image/png');
+    } catch(e) { console.error('barcode error', e); }
+  });
+
+  // Convert each barcode canvas to image, rebuild as static HTML
+  const cardImages = rx.map((p, i) => {
+    const canvas = document.getElementById('email-bc-'+i);
+    return canvas ? canvas.toDataURL('image/png') : '';
   });
 
   document.body.removeChild(tempDiv);
 
-  // Build email body with barcodes as inline images
-  let body = '<html><body style="font-family:Arial,sans-serif;padding:20px;">';
-  body += '<h2 style="color:#1a5f3f;">Συνταγές ΙΔΙΚΑ</h2>';
-  if(label) body += '<p><strong>Ετικέτα:</strong> '+label+'</p>';
-  body += '<p><strong>Ημερομηνία:</strong> '+now+'</p>';
-  body += '<p><strong>Φαρμακείο:</strong> '+S.name+'</p><hr>';
+  // Build final static HTML with embedded barcode images
+  let finalHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="font-family:Arial,sans-serif;padding:20px;max-width:700px;">';
+  finalHtml += `<div style="border-bottom:2px solid #1a5f3f;padding-bottom:8px;margin-bottom:14px;">
+    <div style="font-size:16px;font-weight:700;color:#1a5f3f;">Φαρμακείο — Συνταγές ΙΔΙΚΑ</div>
+    <div style="font-size:11px;color:#444;margin-top:4px;">Ημερομηνία: ${now}${label?' &nbsp;|&nbsp; Ετικέτα: '+label:''} &nbsp;|&nbsp; ${S.name}</div>
+  </div>
+  <table width="100%" cellpadding="0" cellspacing="0"><tr>`;
 
-  rx.forEach((p,i) => {
-    body += '<div style="margin:16px 0;padding:12px;border:1px solid #ccc;border-radius:6px;">';
-    body += '<p style="font-size:11px;color:#888;margin:0 0 4px;">Συνταγή '+(i+1)+' από '+rx.length+'</p>';
-    body += '<img src="'+canvases[i]+'" style="max-width:300px;display:block;">';
-    body += '<p style="font-family:monospace;font-weight:700;margin:6px 0 2px;">'+p.number+'</p>';
-    if(p.ekdosi) body += '<p style="font-size:12px;color:#444;margin:2px 0;">Έκδοση: '+p.ekdosi+'</p>';
-    if(p.lixis)  body += '<p style="font-size:12px;color:#444;margin:2px 0;">Λήξη: '+p.lixis+'</p>';
-    body += '</div>';
+  rx.forEach((p, i) => {
+    if (i > 0 && i % 2 === 0) finalHtml += '</tr><tr>';
+    finalHtml += `<td width="50%" style="padding:6px;vertical-align:top;">
+      <div style="border:1px solid #ccc;padding:10px;text-align:center;">
+        <div style="font-size:10px;color:#888;margin-bottom:4px;">Συνταγή ${i+1} από ${rx.length}</div>
+        <img src="${cardImages[i]}" style="max-width:100%;display:block;margin:0 auto;">
+        <div style="font-family:monospace;font-size:11px;font-weight:700;margin-top:5px;">${p.number}</div>
+        <div style="font-size:10px;color:#444;margin-top:3px;">${p.ekdosi?'Έκδοση: '+p.ekdosi:''}${p.ekdosi&&p.lixis?'<br>':''}${p.lixis?'Λήξη: '+p.lixis:''}</div>
+      </div>
+    </td>`;
   });
 
-  body += '</body></html>';
+  finalHtml += '</tr></table></body></html>';
 
-  // Use mailto with HTML body
-  window.location.href = 'mailto:?subject='+subj+'&body='+encodeURIComponent(body);
-  toast('📧 Άνοιγμα εφαρμογής email...','ok');
+  // Create blob and download as HTML file (can be opened in any browser and printed)
+  const blob = new Blob([finalHtml], {type: 'text/html'});
+  const url  = URL.createObjectURL(blob);
+
+  // Use Web Share API if available (Android) - allows sharing to email, WhatsApp etc
+  if (navigator.share && navigator.canShare) {
+    const file = new File([blob], 'syntagies-'+now.replace(/\//g,'-')+'.html', {type:'text/html'});
+    if (navigator.canShare({files:[file]})) {
+      navigator.share({
+        title: 'Συνταγές ΙΔΙΚΑ' + (label?' - '+label:''),
+        files: [file]
+      }).then(() => toast('📤 Κοινοποίηση επιτυχής','ok'))
+        .catch(e => { if(e.name !== 'AbortError') fallbackEmail(url, subj); });
+      return;
+    }
+  }
+
+  // Fallback: download the file
+  fallbackEmail(url, subj);
+}
+
+function fallbackEmail(url, subj) {
+  // Download the HTML file - user can then attach to email
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'syntagies.html';
+  a.click();
+  toast('📥 Αρχείο αποθηκεύτηκε — επισυνάψτε το σε email','ok');
 }
 
 // ── Saved lists ────────────────────────────────────────────────────
