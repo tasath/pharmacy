@@ -515,28 +515,74 @@ async function runOCR() {
 }
 
 function extractRx(text) {
-  // Normalize OCR mistakes — including Greek Θ/θ misread as 0
-  const norm = text
-    .replace(/[θΘoO]/g, '0')  // theta + o -> 0
-    .replace(/[lI|]/g, '1')
-    .replace(/[sS]/g, '5')
-    .replace(/[bB]/g, '8')
-    .replace(/[zZ]/g, '2');
-  const found=[];
-  const codes=[], dateRx=/(\d{2}\/\d{2}\/\d{4})/g;
-  for(const src of [text,norm]){
-    let m;
-    const r1=/#\s*(\d{10,16})/g, r2=/(?<!\d)(\d{16})(?!\d)/g;
-    while((m=r1.exec(src))!==null) if(!codes.find(c=>c.code===m[1])) codes.push({code:m[1],pos:m.index});
-    while((m=r2.exec(src))!==null) if(!codes.find(c=>c.code===m[1])) codes.push({code:m[1],pos:m.index});
+  const found = [];
+
+  // Map every Greek/Latin character that OCR misreads as a digit
+  function normChar(c) {
+    const map = {
+      // -> 0
+      'o':'0','O':'0','θ':'0','Θ':'0','φ':'0','Φ':'0','ο':'0','Ο':'0',
+      // -> 1
+      'l':'1','I':'1','|':'1','Ι':'0','ι':'1',
+      // -> 2
+      'z':'2','Z':'2','ζ':'2',
+      // -> 3
+      'ε':'3','Ε':'3',
+      // -> 5
+      's':'5','S':'5','ς':'5','σ':'5','Σ':'5',
+      // -> 6
+      // -> 7
+      // -> 8
+      'b':'8','B':'8','β':'8',
+      // -> 9
+      'γ':'9','Γ':'9','ρ':'9','Ρ':'9'
+    };
+    return map[c] !== undefined ? map[c] : c;
   }
-  codes.sort((a,b)=>a.pos-b.pos);
-  const dates=[]; let m;
-  while((m=dateRx.exec(text))!==null) dates.push({date:m[1],pos:m.index});
-  codes.forEach(c=>{
-    const next=dates.filter(d=>d.pos>c.pos).slice(0,2);
-    found.push({number:c.code, ekdosi:next[0]?.date||'', lixis:next[1]?.date||''});
+
+  function normStr(s) {
+    return s.split('').map(normChar).join('');
+  }
+
+  // Find dates (usually OCR reads these correctly)
+  const dateRx = /(\d{2}\/\d{2}\/\d{4})/g;
+  const dates  = [];
+  let m;
+  while ((m = dateRx.exec(text)) !== null) {
+    dates.push({ date: m[1], pos: m.index });
+  }
+
+  // Strategy 1: find # then take next chunk and normalize it
+  const hashRx = /#\s*([^\s\n]{6,20})/g;
+  const codes  = [];
+  while ((m = hashRx.exec(text)) !== null) {
+    const raw     = m[1];
+    const cleaned = normStr(raw).replace(/\D/g, '');
+    console.log('# match:', JSON.stringify(raw), '->', cleaned);
+    if (cleaned.length >= 10 && cleaned.length <= 16) {
+      if (!codes.find(c => c.code === cleaned)) {
+        codes.push({ code: cleaned, pos: m.index });
+      }
+    }
+  }
+
+  // Strategy 2: normalize whole text and find 16-digit sequences
+  const normText = normStr(text);
+  const bareRx   = /(?<!\d)(\d{16})(?!\d)/g;
+  while ((m = bareRx.exec(normText)) !== null) {
+    if (!codes.find(c => c.code === m[1])) {
+      codes.push({ code: m[1], pos: m.index });
+    }
+  }
+
+  codes.sort((a, b) => a.pos - b.pos);
+
+  codes.forEach(c => {
+    const next = dates.filter(d => d.pos > c.pos).slice(0, 2);
+    found.push({ number: c.code, ekdosi: next[0]?.date || '', lixis: next[1]?.date || '' });
   });
+
+  console.log('extractRx result:', JSON.stringify(found));
   return found;
 }
 
