@@ -729,34 +729,47 @@ function sendEmail(rx, label) {
 
   finalHtml += '</tr></table></body></html>';
 
-  // Create blob and download as HTML file (can be opened in any browser and printed)
+  // Open in new window and trigger print-to-PDF
   const blob = new Blob([finalHtml], {type: 'text/html'});
   const url  = URL.createObjectURL(blob);
 
-  // Use Web Share API if available (Android) - allows sharing to email, WhatsApp etc
+  // Open HTML in new tab — user saves as PDF via browser print dialog
+  const win = window.open(url, '_blank');
+  if (win) {
+    win.onload = () => {
+      setTimeout(() => {
+        win.print();  // Opens print dialog → user selects "Save as PDF"
+      }, 800);
+    };
+    toast('📄 Αποθηκεύστε ως PDF και επισυνάψτε σε email', 'ok');
+    return;
+  }
+
+  // Fallback for browsers that block popups: use Web Share API
   if (navigator.share && navigator.canShare) {
-    const file = new File([blob], 'syntagies-'+now.replace(/\//g,'-')+'.html', {type:'text/html'});
+    const file = new File([blob], 'syntagies-'+now.replace(/\//g,'-')+'.pdf', {type:'text/html'});
     if (navigator.canShare({files:[file]})) {
       navigator.share({
         title: 'Συνταγές ΙΔΙΚΑ' + (label?' - '+label:''),
         files: [file]
       }).then(() => toast('📤 Κοινοποίηση επιτυχής','ok'))
-        .catch(e => { if(e.name !== 'AbortError') fallbackEmail(url, subj); });
+        .catch(e => {
+          if(e.name !== 'AbortError') {
+            const a = document.createElement('a');
+            a.href = url; a.download = 'syntagies.html'; a.click();
+            toast('📥 Αρχείο αποθηκεύτηκε','ok');
+          }
+        });
       return;
     }
   }
 
-  // Fallback: download the file
-  fallbackEmail(url, subj);
-}
-
-function fallbackEmail(url, subj) {
-  // Download the HTML file - user can then attach to email
+  // Last fallback: just download
   const a = document.createElement('a');
   a.href = url;
   a.download = 'syntagies.html';
   a.click();
-  toast('📥 Αρχείο αποθηκεύτηκε — επισυνάψτε το σε email','ok');
+  toast('📥 Αρχείο αποθηκεύτηκε — επισυνάψτε σε email','ok');
 }
 
 // ── Saved lists ────────────────────────────────────────────────────
