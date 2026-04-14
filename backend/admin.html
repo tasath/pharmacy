@@ -178,6 +178,7 @@ tr:last-child td{border-bottom:none;}
 </div>
 
 <script>
+document.addEventListener('DOMContentLoaded', function() {
 const SERVER = 'https://pharmacy-backend-ay17.onrender.com';
 let pwd = sessionStorage.getItem('admin_pwd') || '', adminData = {};
 
@@ -283,9 +284,8 @@ async function toggleActive(code,active){
   await load();
 }
 async function resetPharmPwd(code, name) {
-  const newPwd = prompt('Νέος κωδικός για "'+name+'":
-(αφήστε κενό για αυτόματη δημιουργία)');
-  if (newPwd === null) return; // cancelled
+  const newPwd = prompt('Νεος κωδικος για ' + name + ' (αδειο = αυτοματος):');
+  if (newPwd === null) return;
   const pwd_to_set = newPwd.trim() || Math.random().toString(36).slice(2,8).toUpperCase();
   const res = await fetch(SERVER+'/admin/pharmacy/'+code, {
     method:'PUT',
@@ -294,7 +294,7 @@ async function resetPharmPwd(code, name) {
   });
   const d = await res.json();
   if(d.ok) {
-    alert('✅ Νέος κωδικός για "'+name+'":\n\n' + pwd_to_set + '\n\nΔώστε τον στο φαρμακείο.');
+    alert('Νεος κωδικος για ' + name + ': ' + pwd_to_set);
     await load();
   }
 }
@@ -422,6 +422,7 @@ document.getElementById('btn-change-pwd').addEventListener('click', async()=>{
   document.getElementById('pwd-alert').innerHTML='<div class="alert ok">✅ Άλλαξε</div>';
   setTimeout(()=>document.getElementById('pwd-alert').innerHTML='',3000);
 });
+}); // DOMContentLoaded
 </script>
 </body>
 </html>
