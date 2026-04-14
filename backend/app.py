@@ -80,37 +80,13 @@ def clean_b64(b64):
         b64 = b64.split(',')[1]
     return b64.strip()
 
-def resize_image(img_bytes, max_bytes=3_500_000):
-    from PIL import Image
-    import io
-    img = Image.open(io.BytesIO(img_bytes))
-    if img.mode not in ('RGB', 'L'):
-        img = img.convert('RGB')
-    w, h = img.size
-    # Resize if too large
-    max_dim = 3000
-    if w > max_dim or h > max_dim:
-        ratio = min(max_dim/w, max_dim/h)
-        img = img.resize((int(w*ratio), int(h*ratio)), Image.LANCZOS)
-        print(f'Resized to {img.size}')
-    # Compress until small enough
-    quality = 85
-    while quality >= 40:
-        buf = io.BytesIO()
-        img.save(buf, format='JPEG', quality=quality)
-        data = buf.getvalue()
-        if len(data) <= max_bytes:
-            print(f'Compressed to {len(data)} bytes at quality {quality}')
-            return data
-        quality -= 15
-    return data
-
 def ocr_azure(b64):
     b64       = clean_b64(b64)
     img_bytes = base64.b64decode(b64)
     print(f'Image size: {len(img_bytes)} bytes')
-    if len(img_bytes) > 3_500_000:
-        img_bytes = resize_image(img_bytes)
+    # Image is pre-resized by frontend - just send it
+    if len(img_bytes) > 4_000_000:
+        return ''  # safety check - should not happen
     url = AZURE_ENDPOINT.rstrip('/') + '/vision/v3.2/ocr'
     res = requests.post(url,
         headers={
@@ -190,6 +166,17 @@ def cleanup_lists(data):
     return data, len(to_delete) > 0
 
 # ── Public routes ──────────────────────────────────────────────────
+@app.route('/api/public/<list_id>', methods=['GET'])
+def public_list(list_id):
+    data = load_data()
+    lst  = data.get('lists', {}).get(list_id)
+    if not lst:
+        return jsonify({'ok': False, 'error': 'Η λίστα δεν βρέθηκε ή έχει λήξει'}), 404
+    # Check not expired
+    if datetime.datetime.fromisoformat(lst['expires']) < datetime.datetime.now():
+        return jsonify({'ok': False, 'error': 'Η λίστα έχει λήξει'}), 404
+    return jsonify({'ok': True, 'prescriptions': lst['prescriptions'], 'created': lst['created'], 'expires': lst['expires']})
+
 @app.route('/health')
 def health():
     return jsonify({'status': 'ok', 'time': datetime.datetime.now().isoformat()})
