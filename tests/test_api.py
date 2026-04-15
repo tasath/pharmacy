@@ -5,9 +5,10 @@ pytest tests/test_api.py -v
 import pytest, json, time, copy, datetime, sys, os
 import unittest.mock as mock
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend'))
+# Add backend to path — must be before any backend imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backend')))
 
-# Import once — we'll patch functions on the module directly
+# Import once — we ll patch functions on the module directly
 import app_clean
 
 BASE_DATA = {
