@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Node
+node_modules/
+package-lock.json
+
+# VS
+.vs/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
