@@ -43,7 +43,7 @@ function extractRx(text) {
 }
 
 function rxStatus(ekdosi, lixis) {
-  const now = new Date('2026-04-15'); // Fixed date for tests
+  const now = new Date('2026-04-14'); // Fixed date for tests (day before expiry test)
   const parseDate = (s) => {
     if (!s) return null;
     const p = s.split('/');
