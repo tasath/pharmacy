@@ -539,10 +539,11 @@ function extractRx(text) {
   const codes = [];
   const dateRx = /(\d{2}\/\d{2}\/\d{4})/g;
 
-  // Find codes: # + digits in both original and normalized
+  // Find codes: IDIKA codes are always exactly 16 digits
+  // Search in both original and normalized text
   for (const src of [text, norm]) {
-    const r1 = /#\s*(\d{10,16})/g;
-    const r2 = /(?<!\d)(\d{16})(?!\d)/g;
+    const r1 = /#\s*(\d{16})/g;       // # followed by exactly 16 digits
+    const r2 = /(?<!\d)(\d{16})(?!\d)/g;  // standalone 16-digit sequence
     let m;
     while ((m = r1.exec(src)) !== null)
       if (!codes.find(c => c.code === m[1])) codes.push({ code: m[1], pos: m.index });
